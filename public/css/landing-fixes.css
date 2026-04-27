@@ -1,0 +1,53 @@
+/* ==========================================================
+   REHAVITE LANDING PAGE FIXES
+   Overrides applied via this file to preserve the original
+   generated HTML while correcting visual inconsistencies.
+   ========================================================== */
+
+/* --- GALLERY: Uniform image heights --- */
+/* Target the gallery section image rows */
+.kv-ee-gallery-grid img,
+[class*="gallery"] img,
+[class*="kv-ee-img"] img {
+    width: 100%;
+    height: 220px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    border-radius: 12px;
+}
+
+/* Specifically to target the gallery thumbnail containers */
+.kv-ee-img-thumb,
+.kv-ee-thumb-img {
+    height: 220px !important;
+    overflow: hidden !important;
+}
+
+/* Each gallery row container: uniform height */
+[data-section-id] figure,
+[data-section-id] .kv-ee-col > div > img,
+.kv-ee-gallery figure img {
+    height: 220px !important;
+    object-fit: cover !important;
+    width: 100% !important;
+}
+
+/* --- MAP IFRAME: Make it taller --- */
+iframe[src*="google.com/maps"],
+iframe[src*="maps.google"],
+.kv-ee-gmap iframe,
+[class*="map"] iframe {
+    height: 420px !important;
+    min-height: 420px !important;
+    width: 100% !important;
+    border: 0;
+    border-radius: 12px;
+}
+
+/* --- BUTTON DUPLICATE FIX: Hide orphan icon before the maps button --- */
+/* The "ghost" icon that appears before the Abrir en Maps button */
+a[href*="maps.google"] > .kv-ee-btn-icon:not(:last-child),
+.kv-ee-button-wrapper > a + a,
+.rh-location-btn + .rh-location-btn {
+    display: none !important;
+}
