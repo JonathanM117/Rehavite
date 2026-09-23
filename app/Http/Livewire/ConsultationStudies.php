@@ -15,7 +15,6 @@ class ConsultationStudies extends Component
 
     #[Reactive]
     public $consultationId;
-    public $consultation;
     public $studies = [];
     public $showForm = false;
 
@@ -25,13 +24,19 @@ class ConsultationStudies extends Component
     public $description;
     public $file;
     public $uploadProgress = 0;
+    
+    // Edit mode
+    public $editingStudyId = null;
 
-    protected $rules = [
-        'date' => 'required|date',
-        'type' => 'required|string',
-        'description' => 'nullable|string|max:500',
-        'file' => 'required|file|mimes:jpg,jpeg,png,webp,pdf|max:10240', // 10MB max
-    ];
+    protected function rules()
+    {
+        return [
+            'date' => 'required|date',
+            'type' => 'required|string',
+            'description' => 'nullable|string|max:500',
+            'file' => ($this->editingStudyId ? 'nullable' : 'required') . '|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
+        ];
+    }
 
     protected $messages = [
         'file.required' => 'Debes seleccionar un archivo.',
@@ -68,12 +73,12 @@ class ConsultationStudies extends Component
     {
         if (!$this->consultationId) {
             $this->studies = [];
-            $this->consultation = null;
             return;
         }
 
-        $this->consultation = Consultation::with('studies')->findOrFail($this->consultationId);
-        $this->studies = $this->consultation->studies()->orderByDesc('date')->get();
+        $this->studies = Study::where('consultation_id', $this->consultationId)
+            ->orderByDesc('date')
+            ->get();
     }
 
     public function toggleForm()
@@ -86,6 +91,7 @@ class ConsultationStudies extends Component
 
     public function resetForm()
     {
+        $this->editingStudyId = null;
         $this->date = date('Y-m-d');
         $this->type = 'otro';
         $this->description = null;
@@ -93,28 +99,58 @@ class ConsultationStudies extends Component
         $this->resetErrorBag();
     }
 
+    public function editStudy($id)
+    {
+        $study = Study::find($id);
+        if (!$study) return;
+
+        $this->editingStudyId = $id;
+        $this->date = $study->date?->format('Y-m-d');
+        $this->type = $study->type;
+        $this->description = $study->description;
+        $this->file = null;
+        $this->showForm = true;
+    }
+
+    public function cancelEdit()
+    {
+        $this->resetForm();
+        $this->showForm = false;
+    }
+
     public function saveStudy()
     {
         $this->validate();
 
-        // 1. Storage Path: studies/{consultation_id}/{filename}
-        $filename = time() . '_' . $this->file->getClientOriginalName();
-        $path = $this->file->storeAs('studies/' . $this->consultationId, $filename, 'public');
-
-        // 2. Create Study Record
-        Study::create([
+        $data = [
             'consultation_id' => $this->consultationId,
             'date' => $this->date,
             'type' => $this->type,
             'description' => $this->description,
-            'file_path' => $path,
-        ]);
+        ];
+
+        if ($this->file) {
+            $filename = time() . '_' . $this->file->getClientOriginalName();
+            $path = $this->file->storeAs('studies/' . $this->consultationId, $filename, 'public');
+            $data['file_path'] = $path;
+        }
+
+        if ($this->editingStudyId) {
+            $study = Study::find($this->editingStudyId);
+            // Delete old file if new file uploaded
+            if ($this->file && Storage::disk('public')->exists($study->file_path)) {
+                Storage::disk('public')->delete($study->file_path);
+            }
+            $study->update($data);
+            session()->flash('success', 'Estudio actualizado correctamente.');
+        } else {
+            Study::create($data);
+            session()->flash('success', 'Estudio guardado correctamente.');
+        }
 
         $this->resetForm();
         $this->showForm = false;
         $this->loadData();
-        
-        session()->flash('success', 'Estudio guardado correctamente.');
     }
 
     public function deleteStudy($id)

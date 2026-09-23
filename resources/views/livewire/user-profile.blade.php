@@ -1,4 +1,4 @@
-<div class="user-profile-container">
+<div class="user-profile-container" style="max-width:920px; margin:0 auto;">
     <div class="flex-between mb-24">
         <div>
             <h2 style="margin:0;font-size:24px;font-weight:700;color:var(--text-primary);">Mi Perfil</h2>
@@ -12,9 +12,9 @@
         </div>
     @endif
 
-    <div class="grid grid-3" style="gap:24px;">
+    <div style="display:flex; gap:24px; align-items:stretch; flex-wrap:wrap;">
         {{-- Profile Preview Card --}}
-        <div class="glass-card" style="height: fit-content; text-align: center; padding: 32px;">
+        <div class="glass-card" style="flex: 0 0 280px; max-width:280px; min-width:240px; text-align: center; padding: 32px;">
             <div style="position:relative; width:120px; height:120px; margin:0 auto 24px;" 
                  x-data="{ uploading: false, progress: 0 }"
                  x-on:livewire-upload-start="uploading = true"
@@ -54,7 +54,7 @@
         </div>
 
         {{-- Edit Form --}}
-        <div class="glass-card grid-col-2" style="padding: 32px;">
+        <div class="glass-card" style="flex:1; min-width:280px; padding: 32px;">
             <form wire:submit.prevent="updateProfile">
                 <div class="grid grid-2" style="gap:24px;">
                     <div class="form-group">

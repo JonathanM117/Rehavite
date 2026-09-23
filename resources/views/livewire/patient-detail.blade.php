@@ -1,6 +1,7 @@
-<div>
+<div x-data="{}">
+
     {{-- ═══ PATIENT HEADER ═══ --}}
-    <div class="glass-card mb-24" wire:key="patient-header">
+    <div class="glass-card mb-24" wire:key="patient-header" style="position: relative; z-index: 20;">
         <div class="flex-between">
             <div class="flex-center">
                 <div
@@ -11,14 +12,9 @@
                     <h2 style="margin:0;font-size:22px;font-weight:700;">{{ $patient->full_name }}</h2>
                     <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">
                         <span style="color:var(--text-muted);">Expediente:</span> {{ $patient->expediente_id }}
-                        &nbsp;·&nbsp;
                         @if($patient->birth_date)
-                            {{ $patient->age }} años
+                            &nbsp;·&nbsp;{{ $patient->age_label }}
                         @endif
-                        &nbsp;·&nbsp;
-                        <span class="badge-modern badge-{{ $patient->status }}">
-                            {{ $patient->status === 'active' ? 'Activo' : ($patient->status === 'inactive' ? 'Inactivo' : 'Alta') }}
-                        </span>
                     </div>
                 </div>
             </div>
@@ -27,13 +23,89 @@
                     <button class="btn-modern btn-secondary btn-sm" wire:click="openCollaboratorModal">
                         <i class="fas fa-user-friends"></i> Colaboradores
                     </button>
-                    <a href="{{ route('admin.patients.edit', $patient) }}" class="btn-modern btn-secondary btn-sm">
+                <a href="{{ route('admin.patients.edit', $patient) }}" class="btn-modern btn-secondary btn-sm">
                         <i class="fas fa-pen"></i> Editar
                     </a>
+                @endif
+                {{-- Exportar (PDF / Excel) — Admin only --}}
+                @if(auth()->user()->admin)
+                <div x-data="{ openExport: false }" style="position:relative;">
+                    <button type="button" class="btn-modern btn-sm" @click="openExport = !openExport" @click.outside="openExport = false"
+                            style="background: linear-gradient(135deg,#0E6E6E,#0a5252); color:white; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-download"></i> Exportar
+                        <i class="fas fa-caret-down" style="font-size:10px;"></i>
+                    </button>
+                    <div x-show="openExport" x-cloak x-transition
+                         style="position:absolute; right:0; top:calc(100% + 6px); z-index:50; min-width:180px; background:var(--bg-app); border:1px solid rgba(255,255,255,0.1); border-radius:10px; box-shadow:0 12px 32px rgba(0,0,0,0.4); padding:8px; display:flex; flex-direction:column; gap:4px;">
+                        <a href="{{ route('admin.reports.patient.pdf', $patient) }}" target="_blank"
+                           style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:6px; text-decoration:none; color:var(--text-primary); font-size:13px;"
+                           onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">
+                            <i class="fas fa-file-pdf" style="color:#e74c3c;"></i> Descargar PDF
+                        </a>
+                        <a href="{{ route('admin.reports.patient.excel', $patient) }}"
+                           style="display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:6px; text-decoration:none; color:var(--text-primary); font-size:13px;"
+                           onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">
+                            <i class="fas fa-file-excel" style="color:#27ae60;"></i> Descargar Excel
+                        </a>
+                    </div>
+                </div>
                 @endif
                 <a href="{{ route('admin.patients.index') }}" class="btn-modern btn-secondary btn-sm">
                     <i class="fas fa-arrow-left"></i> Volver
                 </a>
+
+                {{-- ═══ MENU DE OPCIONES (tres líneas) ═══ --}}
+                @php $isAdminHeader = auth()->user()->admin; @endphp
+                <div x-data="{ openMenu: false }" style="position:relative;">
+                    <button type="button" class="btn-icon" @click="openMenu = !openMenu" @click.outside="openMenu = false" title="Más opciones">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <div x-show="openMenu" x-cloak x-transition
+                         style="position:absolute; right:0; top:calc(100% + 6px); z-index:50; min-width:240px; background:var(--bg-app); border:1px solid rgba(255,255,255,0.1); border-radius:10px; box-shadow:0 12px 32px rgba(0,0,0,0.4); padding:8px; display:flex; flex-direction:column; gap:4px;">
+                        @if($isAdminHeader)
+                            @if($patient->isPendingDeletion())
+                                <div style="font-size:12px; color:#f59e0b; padding:8px 10px; background:rgba(245,158,11,0.08); border-radius:6px; margin-bottom:4px;">
+                                    <i class="fas fa-exclamation-triangle"></i> Solicitud de eliminación pendiente
+                                    @if($patient->deletionRequestedBy)
+                                        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Por {{ $patient->deletionRequestedBy->name }} · {{ $patient->deletion_requested_at?->diffForHumans() }}</div>
+                                    @endif
+                                </div>
+                                <form action="{{ route('admin.patients.deletion.confirm', $patient) }}" method="POST" onsubmit="return confirm('¿Confirmar la eliminación definitiva de este paciente?')">
+                                    @csrf
+                                    <button type="submit" class="btn-modern btn-sm" style="width:100%; justify-content:flex-start; background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.2);"><i class="fas fa-trash"></i> Confirmar eliminación</button>
+                                </form>
+                                <form action="{{ route('admin.patients.deletion.reject', $patient) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="btn-modern btn-sm" style="width:100%; justify-content:flex-start; background:rgba(16,185,129,0.1); color:#10b981; border:1px solid rgba(16,185,129,0.2);"><i class="fas fa-undo"></i> Rechazar — Mantener activo</button>
+                                </form>
+                                <form action="{{ route('admin.patients.deletion.archive', $patient) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="btn-modern btn-sm" style="width:100%; justify-content:flex-start; background:rgba(59,130,246,0.1); color:#3b82f6; border:1px solid rgba(59,130,246,0.2);"><i class="fas fa-archive"></i> Archivar paciente</button>
+                                </form>
+                            @else
+                                @if(!$patient->isArchived())
+                                <form action="{{ route('admin.patients.deletion.archive', $patient) }}" method="POST" onsubmit="return confirm('¿Archivar a este paciente?')">
+                                    @csrf
+                                    <button type="submit" class="btn-modern btn-sm" style="width:100%; justify-content:flex-start; background:rgba(59,130,246,0.1); color:#3b82f6; border:1px solid rgba(59,130,246,0.2);"><i class="fas fa-archive"></i> Archivar paciente</button>
+                                </form>
+                                @endif
+                                <form action="{{ route('admin.patients.destroy', $patient) }}" method="POST" onsubmit="return confirm('¿Eliminar permanentemente a este paciente? Esta acción es irreversible.')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="btn-modern btn-sm" style="width:100%; justify-content:flex-start; background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.2);"><i class="fas fa-trash"></i> Eliminar paciente</button>
+                                </form>
+                            @endif
+                        @elseif($patient->user_id === auth()->id())
+                            @if($patient->isPendingDeletion())
+                                <div style="font-size:12px; color:#f59e0b; padding:8px 10px;"><i class="fas fa-clock"></i> Solicitud de eliminación pendiente</div>
+                            @else
+                                <form action="{{ route('admin.patients.request-deletion', $patient) }}" method="POST" onsubmit="return confirm('¿Solicitar la eliminación de este paciente? La administradora deberá confirmarlo.')">
+                                    @csrf
+                                    <button type="submit" class="btn-modern btn-sm" style="width:100%; justify-content:flex-start; background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.2);"><i class="fas fa-flag"></i> Solicitar eliminación</button>
+                                </form>
+                            @endif
+                        @endif
+                    </div>
+                </div>
             </div>
         </div>
         {{-- Contextual collaborator/owner info --}}
@@ -70,22 +142,38 @@
 
     {{-- ═══ TABS ═══ --}}
     <div class="tabs-modern" wire:key="navigation-tabs-bar">
-        <button class="tab-item {{ $activeTab === 'expediente' ? 'active' : '' }}" wire:click="setTab('expediente')">
+        <button class="tab-item {{ $activeTab === 'expediente' ? 'active' : '' }}"
+            @click="$wire.setTab('expediente')">
             <i class="fas fa-file-medical"></i> Expediente
         </button>
-        <button class="tab-item {{ $activeTab === 'consultas' ? 'active' : '' }}" wire:click="setTab('consultas')">
-            <i class="fas fa-stethoscope"></i> Consultas ({{ $patient->consultations->count() }})
+        <button class="tab-item {{ $activeTab === 'consultas' ? 'active' : '' }}"
+            @click="$wire.setTab('consultas')">
+            <i class="fas fa-stethoscope"></i> Episodio Clínico ({{ $patient->consultations->count() }})
         </button>
-        <button class="tab-item {{ $activeTab === 'pagos' ? 'active' : '' }}" wire:click="setTab('pagos')">
-            <i class="fas fa-credit-card"></i> Pagos ({{ $patient->payments->count() }})
+        <button class="tab-item {{ $activeTab === 'documentos' ? 'active' : '' }}"
+            @click="$wire.setTab('documentos')">
+            <i class="fas fa-folder-open"></i> Documentos Clínicos ({{ $patient->clinicalDocuments->count() }})
         </button>
-        <button class="tab-item {{ $activeTab === 'historial' ? 'active' : '' }}" wire:click="setTab('historial')">
+        @if(auth()->user()->admin)
+        <button class="tab-item {{ $activeTab === 'historial' ? 'active' : '' }}"
+            @click="$wire.setTab('historial')">
             <i class="fas fa-history"></i> Historial
         </button>
+        @endif
+        <a href="{{ route('admin.patients.exercise-plan', $patient) }}" target="_blank"
+            class="tab-item" style="margin-left:auto; text-decoration:none; background:rgba(14,110,110,0.12); color:#0E6E6E; border:1px solid rgba(14,110,110,0.3);">
+            <i class="fas fa-dumbbell"></i> Plan de ejercicios
+            <i class="fas fa-external-link-alt" style="font-size:10px; margin-left:4px;"></i>
+        </a>
     </div>
 
+
     {{-- ═══ TAB: EXPEDIENTE ═══ --}}
-    <div wire:key="tab-wrapper-expediente" style="display: {{ $activeTab === 'expediente' ? 'block' : 'none' }};">
+    {{-- When form is dirty: always visible and elevated above the overlay via z-9500 --}}
+    @php $expedienteDisplay = $activeTab === 'expediente' ? 'block' : 'none'; @endphp
+    <div wire:key="tab-wrapper-expediente"
+         id="expediente-tab-content"
+         style="display:{{ $expedienteDisplay }};">
         @php $record = $patient->medicalRecord; @endphp
 
         @if(!$record)
@@ -104,8 +192,55 @@
                 </div>
             </div>
         @else
-            <form action="{{ route('admin.medical-records.update', $record) }}" method="POST">
+            {{-- Static View --}}
+            @include('livewire.partials.medical-record-static')
+
+            {{-- Acciones de Administración (archivar/eliminar) ahora viven en el menú de tres líneas del header --}}
+
+            {{-- Modal de Edición del Expediente --}}
+            <div id="medical-record-modal"
+                 onclick="if(event.target===this) {
+                     const form = document.getElementById('medical-record-form');
+                     if (form && form.dataset.dirty === 'true') {
+                         if (confirm('Tienes cambios sin guardar, ¿deseas guardar?')) {
+                             form.submit();
+                         }
+                     } else {
+                         if (form) { form.reset(); delete form.dataset.dirty; }
+                         this.style.display = 'none';
+                         document.body.style.overflow = '';
+                     }
+                 }"
+                 style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); padding:24px; overflow-y:auto; align-items:flex-start; justify-content:center;">
+                <div style="background:var(--bg-app); max-width:1100px; width:100%; margin:40px auto; border-radius:16px; padding:32px; position:relative; box-shadow:0 30px 80px rgba(0,0,0,0.6);">
+                    
+                    <div class="flex-between" style="margin-bottom:24px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:16px;">
+                        <h2 style="margin:0; font-size:20px; font-weight:700;"><i class="fas fa-pen"></i> Editar Expediente Médico</h2>
+                        <button type="button" 
+                                onclick="const form = document.getElementById('medical-record-form'); if(form && form.dataset.dirty === 'true' && !confirm('Tienes cambios sin guardar en el expediente. ¿Seguro que deseas salir sin guardar?')) return; if(form) { form.reset(); delete form.dataset.dirty; } document.getElementById('medical-record-modal').style.display='none'; document.body.style.overflow='';"
+                                style="background:rgba(255,255,255,0.1); border:none; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; color:var(--text-secondary); cursor:pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+            <form id="medical-record-form"
+                  action="{{ route('admin.medical-records.update', $record) }}" method="POST"
+                  oninput="this.dataset.dirty = 'true'"
+                  onchange="this.dataset.dirty = 'true'"
+                  onsubmit="delete this.dataset.dirty">
                 @csrf @method('PUT')
+
+                {{-- Controles de Guardado (fijos en la parte inferior o superior) --}}
+                <div style="display:flex; justify-content:flex-end; gap:12px; margin-bottom: 24px;">
+                    <button type="button"
+                            onclick="const form = document.getElementById('medical-record-form'); if(form && form.dataset.dirty === 'true' && !confirm('Tienes cambios sin guardar en el expediente. ¿Seguro que deseas salir sin guardar?')) return; if(form) { form.reset(); delete form.dataset.dirty; } document.getElementById('medical-record-modal').style.display='none'; document.body.style.overflow='';"
+                            class="btn-modern btn-secondary">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-modern btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
 
                 {{-- ═══ DATOS PERSONALES (Sección 0) ═══ --}}
                 <div class="glass-card mb-24">
@@ -116,18 +251,21 @@
                     <div class="grid grid-3">
                         <div class="form-group">
                             <label class="form-label">Edad</label>
+                            @php
+                                $autoAge = old('age', $record->age ?? ($patient->birth_date ? $patient->birth_date->age : null));
+                            @endphp
                             <input type="number" name="age" class="form-control-modern"
-                                value="{{ old('age', $record->age) }}">
+                                value="{{ $autoAge }}" min="0" max="130">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Estado Civil</label>
                             <input type="text" name="marital_status" class="form-control-modern"
-                                value="{{ old('marital_status', $record->marital_status) }}">
+                                value="{{ old('marital_status', $record->marital_status) }}" placeholder="Soltero, Casado, Viudo">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Domicilio</label>
                             <input type="text" name="address" class="form-control-modern"
-                                value="{{ old('address', $record->address) }}">
+                                value="{{ old('address', $record->address) }}" placeholder="Colonia, Fraccionamiento">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Lateralidad</label>
@@ -138,17 +276,17 @@
                         <div class="form-group">
                             <label class="form-label">Escolaridad / Ocupación</label>
                             <input type="text" name="occupation" class="form-control-modern"
-                                value="{{ old('occupation', $record->occupation) }}">
+                                value="{{ old('occupation', $record->occupation) }}" placeholder="Nivel de estudios, Ocupación">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="grid-column: span 2;">
                             <label class="form-label">Dependencia Económica</label>
                             <input type="text" name="economic_dependency" class="form-control-modern"
-                                value="{{ old('economic_dependency', $record->economic_dependency) }}">
+                                value="{{ old('economic_dependency', $record->economic_dependency) }}" placeholder="Independiente, Dependiente de padres, Pareja, etc.">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="grid-column: 1 / -1;">
                             <label class="form-label">Cuidador Primario</label>
                             <input type="text" name="primary_caregiver" class="form-control-modern"
-                                value="{{ old('primary_caregiver', $record->primary_caregiver) }}">
+                                value="{{ old('primary_caregiver', $record->primary_caregiver) }}" placeholder="(En caso de incapacidad del paciente)">
                         </div>
                     </div>
                 </div>
@@ -163,7 +301,7 @@
                         <div class="form-group">
                             <label class="form-label">&iquest;C&oacute;mo se enter&oacute; de nuestros servicios?</label>
                             <input type="text" name="personal_non_pathological[referencia_como_entero]" class="form-control-modern"
-                                value="{{ old('personal_non_pathological.referencia_como_entero', $record->personal_non_pathological['referencia_como_entero'] ?? '') }}">
+                                value="{{ old('personal_non_pathological.referencia_como_entero', $record->personal_non_pathological['referencia_como_entero'] ?? '') }}" placeholder="Redes sociales, Recomendación, Ubicación, Google">
                         </div>
                         <div class="form-group">
                             <label class="form-label">M&eacute;dico remitente</label>
@@ -179,11 +317,11 @@
                         <i class="fas fa-phone-alt"></i>
                         <h3>Contacto de Emergencia</h3>
                     </div>
-                    <div class="grid grid-3">
-                        <div class="form-group">
+                    <div class="grid grid-2">
+                        <div class="form-group" style="grid-column: span 2;">
                             <label class="form-label">Nombre</label>
                             <input type="text" name="personal_non_pathological[emergencia_nombre]" class="form-control-modern"
-                                value="{{ old('personal_non_pathological.emergencia_nombre', $record->personal_non_pathological['emergencia_nombre'] ?? '') }}">
+                                value="{{ old('personal_non_pathological.emergencia_nombre', $record->personal_non_pathological['emergencia_nombre'] ?? '') }}" placeholder="(En caso de emergencia en consultorio)">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Tel&eacute;fono</label>
@@ -193,7 +331,7 @@
                         <div class="form-group">
                             <label class="form-label">Parentesco</label>
                             <input type="text" name="personal_non_pathological[emergencia_parentesco]" class="form-control-modern"
-                                value="{{ old('personal_non_pathological.emergencia_parentesco', $record->personal_non_pathological['emergencia_parentesco'] ?? '') }}">
+                                value="{{ old('personal_non_pathological.emergencia_parentesco', $record->personal_non_pathological['emergencia_parentesco'] ?? '') }}" placeholder="Madre, Padre, Hermano, Esposo">
                         </div>
                     </div>
                 </div>
@@ -204,7 +342,7 @@
                         <i class="fas fa-users"></i>
                         <h3>Representante Legal</h3>
                     </div>
-                    <div class="grid grid-3">
+                    <div class="grid grid-2">
                         <div class="form-group">
                             <label class="form-label">Nombre</label>
                             <input type="text" name="guardian_name" class="form-control-modern"
@@ -228,63 +366,108 @@
                     </div>
                 </div>
 
-                {{-- ═══ ANTECEDENTES HEREDOFAMILIARES (Sección 3) ═══ --}}
-                @php $fh = array_merge(\App\Models\MedicalRecord::familyHistoryDefaults(), $record->family_history ?? []); @endphp
-                <div class="glass-card mb-24">
+                {{-- ═══ SECCIÓN PEDIÁTRICA ═══ --}}
+                @php
+                    $ped = $record->pediatric_history ?? [];
+                    $hasPediatricData = !empty($ped['is_pediatric']) || 
+                                        !empty($ped['gestational_age']) || 
+                                        !empty($ped['milestone_head_control']) || 
+                                        !empty($ped['milestone_sitting']) || 
+                                        !empty($ped['milestone_walking']);
+                @endphp
+                <div class="glass-card mb-24" x-data="{ isPediatric: {{ $hasPediatricData ? 'true' : 'false' }} }">
                     <div class="section-header">
-                        <i class="fas fa-heartbeat"></i>
-                        <h3>Antecedentes Heredofamiliares</h3>
+                        <i class="fas fa-baby"></i>
+                        <h3>Sección Pediátrica (Paciente Infantil)</h3>
+                        <label style="margin-left:auto; display:flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; font-weight:600; color:var(--accent-primary);">
+                            <input type="checkbox" name="pediatric_history[is_pediatric]" value="1" x-model="isPediatric" style="cursor:pointer;" {{ $hasPediatricData ? 'checked' : '' }}>
+                            Es Paciente Pediátrico
+                        </label>
                     </div>
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label class="form-label">Diabetes</label>
-                            <input type="text" name="family_history[diabetes]" class="form-control-modern"
-                                value="{{ old('family_history.diabetes', $fh['diabetes']) }}">
+                    
+                    <div x-show="isPediatric" x-cloak style="margin-top:16px;">
+                        <h4 style="margin:0 0 12px; font-size:14px; font-weight:600; color:var(--text-secondary); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px;">Antecedentes Perinatales</h4>
+                        <div class="grid grid-3 mb-24">
+                            <div class="form-group">
+                                <label class="form-label">Edad Gestacional (semanas)</label>
+                                <input type="text" name="pediatric_history[gestational_age]" class="form-control-modern" value="{{ $record->pediatric_history['gestational_age'] ?? '' }}" placeholder="Ej. 38 semanas">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Peso al Nacer (g)</label>
+                                <input type="text" name="pediatric_history[birth_weight]" class="form-control-modern" value="{{ $record->pediatric_history['birth_weight'] ?? '' }}" placeholder="Ej. 3100g">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Talla al Nacer (cm)</label>
+                                <input type="text" name="pediatric_history[birth_height]" class="form-control-modern" value="{{ $record->pediatric_history['birth_height'] ?? '' }}" placeholder="Ej. 50cm">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Puntaje Apgar</label>
+                                <input type="text" name="pediatric_history[apgar]" class="form-control-modern" value="{{ $record->pediatric_history['apgar'] ?? '' }}" placeholder="Ej. 9/10">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tipo de Parto</label>
+                                <select name="pediatric_history[delivery_type]" class="form-control-modern">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="vaginal" {{ ($record->pediatric_history['delivery_type'] ?? '') === 'vaginal' ? 'selected' : '' }}>Vaginal / Eutócico</option>
+                                    <option value="cesarea" {{ ($record->pediatric_history['delivery_type'] ?? '') === 'cesarea' ? 'selected' : '' }}>Cesárea</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Hospitalización Neonatal (días/motivo)</label>
+                                <input type="text" name="pediatric_history[neonatal_hospitalization]" class="form-control-modern" value="{{ $record->pediatric_history['neonatal_hospitalization'] ?? '' }}" placeholder="Ej. Ninguna / 3 días por ictericia">
+                            </div>
+                            <div class="form-group" style="grid-column: span 3;">
+                                <label class="form-label">Complicaciones en Embarazo/Parto</label>
+                                <textarea name="pediatric_history[complications]" class="form-control-modern" rows="2" spellcheck="true" placeholder="Describa si hubo preeclampsia, cordón en cuello, etc.">{{ $record->pediatric_history['complications'] ?? '' }}</textarea>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Cardíacas</label>
-                            <input type="text" name="family_history[cardiacas]" class="form-control-modern"
-                                value="{{ old('family_history.cardiacas', $fh['cardiacas']) }}">
+
+                        <h4 style="margin:0 0 12px; font-size:14px; font-weight:600; color:var(--text-secondary); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px;">Hitos del Desarrollo Psicomotor (Edad aproximada)</h4>
+                        <div class="grid grid-3 mb-24">
+                            <div class="form-group">
+                                <label class="form-label">Control Cefálico</label>
+                                <input type="text" name="pediatric_history[milestone_head_control]" class="form-control-modern" value="{{ $record->pediatric_history['milestone_head_control'] ?? '' }}" placeholder="Ej. 3 meses">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Sedestación (Sentado)</label>
+                                <input type="text" name="pediatric_history[milestone_sitting]" class="form-control-modern" value="{{ $record->pediatric_history['milestone_sitting'] ?? '' }}" placeholder="Ej. 6 meses">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Gateo</label>
+                                <input type="text" name="pediatric_history[milestone_crawling]" class="form-control-modern" value="{{ $record->pediatric_history['milestone_crawling'] ?? '' }}" placeholder="Ej. 8 meses">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Bipedestación (Parado)</label>
+                                <input type="text" name="pediatric_history[milestone_standing]" class="form-control-modern" value="{{ $record->pediatric_history['milestone_standing'] ?? '' }}" placeholder="Ej. 10 meses">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Marcha (Caminar)</label>
+                                <input type="text" name="pediatric_history[milestone_walking]" class="form-control-modern" value="{{ $record->pediatric_history['milestone_walking'] ?? '' }}" placeholder="Ej. 12 meses">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Desarrollo del Lenguaje</label>
+                                <input type="text" name="pediatric_history[language_development]" class="form-control-modern" value="{{ $record->pediatric_history['language_development'] ?? '' }}" placeholder="Ej. Monosílabas a los 10m">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Vasculares</label>
-                            <input type="text" name="family_history[vasculares]" class="form-control-modern"
-                                value="{{ old('family_history.vasculares', $fh['vasculares']) }}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Pulmonares</label>
-                            <input type="text" name="family_history[pulmonares]" class="form-control-modern"
-                                value="{{ old('family_history.pulmonares', $fh['pulmonares']) }}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Neoplasias</label>
-                            <input type="text" name="family_history[neoplasias]" class="form-control-modern"
-                                value="{{ old('family_history.neoplasias', $fh['neoplasias']) }}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Epilepsia</label>
-                            <input type="text" name="family_history[epilepsia]" class="form-control-modern"
-                                value="{{ old('family_history.epilepsia', $fh['epilepsia']) }}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Síndromes</label>
-                            <input type="text" name="family_history[sindromes]" class="form-control-modern"
-                                value="{{ old('family_history.sindromes', $fh['sindromes']) }}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Sistema Nervioso</label>
-                            <input type="text" name="family_history[sistema_nervioso]" class="form-control-modern"
-                                value="{{ old('family_history.sistema_nervioso', $fh['sistema_nervioso']) }}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Autoinmunes</label>
-                            <input type="text" name="family_history[autoinmunes]" class="form-control-modern"
-                                value="{{ old('family_history.autoinmunes', $fh['autoinmunes']) }}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Otros</label>
-                            <input type="text" name="family_history[otros]" class="form-control-modern"
-                                value="{{ old('family_history.otros', $fh['otros']) }}">
+
+                        <h4 style="margin:0 0 12px; font-size:14px; font-weight:600; color:var(--text-secondary); border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:6px;">Otros Antecedentes</h4>
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Esquema de Vacunación</label>
+                                <select name="pediatric_history[vaccinations]" class="form-control-modern">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="completo" {{ ($record->pediatric_history['vaccinations'] ?? '') === 'completo' ? 'selected' : '' }}>Completo para la edad</option>
+                                    <option value="incompleto" {{ ($record->pediatric_history['vaccinations'] ?? '') === 'incompleto' ? 'selected' : '' }}>Incompleto</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Reflejos / Tono Muscular</label>
+                                <input type="text" name="pediatric_history[reflexes]" class="form-control-modern" value="{{ $record->pediatric_history['reflexes'] ?? '' }}" placeholder="Ej. Reflejos primitivos integrados">
+                            </div>
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label class="form-label">Observaciones Adicionales del Desarrollo</label>
+                                <textarea name="pediatric_history[other_development]" class="form-control-modern" rows="2" spellcheck="true" placeholder="Otras observaciones específicas...">{{ $record->pediatric_history['other_development'] ?? '' }}</textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -301,60 +484,143 @@
                             <label class="form-label">Lugar de Nacimiento</label>
                             <input type="text" name="personal_non_pathological[lugar_nacimiento]"
                                 class="form-control-modern"
-                                value="{{ old('personal_non_pathological.lugar_nacimiento', $npat['lugar_nacimiento']) }}">
+                                value="{{ old('personal_non_pathological.lugar_nacimiento', $npat['lugar_nacimiento']) }}" placeholder="Lugar + Zona Urbana/Suburbana/Rural">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Residencia Actual</label>
                             <input type="text" name="personal_non_pathological[residencia_actual]"
                                 class="form-control-modern"
-                                value="{{ old('personal_non_pathological.residencia_actual', $npat['residencia_actual']) }}">
+                                value="{{ old('personal_non_pathological.residencia_actual', $npat['residencia_actual']) }}" placeholder="Lugar + Zona Urbana/Suburbana/Rural">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Casa Habitación</label>
                             <input type="text" name="personal_non_pathological[casa_habitacion]" class="form-control-modern"
-                                value="{{ old('personal_non_pathological.casa_habitacion', $npat['casa_habitacion']) }}">
+                                value="{{ old('personal_non_pathological.casa_habitacion', $npat['casa_habitacion']) }}" placeholder="Propia, Rentada, Compartida, Barreras arq.">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Transporte</label>
                             <input type="text" name="personal_non_pathological[transporte]" class="form-control-modern"
-                                value="{{ old('personal_non_pathological.transporte', $npat['transporte']) }}">
+                                value="{{ old('personal_non_pathological.transporte', $npat['transporte']) }}" placeholder="Propio, Público, Mixto, Dependiente">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Nivel Socioeconómico</label>
                             <input type="text" name="personal_non_pathological[nivel_socioeconomico]"
                                 class="form-control-modern"
-                                value="{{ old('personal_non_pathological.nivel_socioeconomico', $npat['nivel_socioeconomico']) }}">
+                                value="{{ old('personal_non_pathological.nivel_socioeconomico', $npat['nivel_socioeconomico']) }}" placeholder="Bajo, Medio, Medio-alto, Alto">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Animales Domésticos</label>
+                            <label class="form-label">Animales Dom&eacute;sticos</label>
                             <input type="text" name="personal_non_pathological[animales_domesticos]"
                                 class="form-control-modern"
-                                value="{{ old('personal_non_pathological.animales_domesticos', $npat['animales_domesticos']) }}">
+                                value="{{ old('personal_non_pathological.animales_domesticos', $npat['animales_domesticos']) }}" placeholder="Perro, Gato">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Complexi&oacute;n F&iacute;sica</label>
+                            <select name="personal_non_pathological[complexion_fisica]" class="form-control-modern">
+                                <option value="">Seleccionar...</option>
+                                <option value="Delgada" {{ old('personal_non_pathological.complexion_fisica', $npat['complexion_fisica'] ?? '') === 'Delgada' ? 'selected' : '' }}>Delgada</option>
+                                <option value="Mediana" {{ old('personal_non_pathological.complexion_fisica', $npat['complexion_fisica'] ?? '') === 'Mediana' ? 'selected' : '' }}>Mediana</option>
+                                <option value="Robusta" {{ old('personal_non_pathological.complexion_fisica', $npat['complexion_fisica'] ?? '') === 'Robusta' ? 'selected' : '' }}>Robusta</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Nivel de Estr&eacute;s</label>
+                            <input type="text" name="personal_non_pathological[nivel_estres]" class="form-control-modern"
+                                value="{{ old('personal_non_pathological.nivel_estres', $npat['nivel_estres'] ?? '') }}" placeholder="Ej: 0-10, Bajo, Medio...">
+                            <span style="font-size:11px;color:var(--text-muted);display:block;margin-top:4px;">Sugerencias: Bajo, Medio, Alto, 0-10</span>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label class="form-label">Exigencia Laboral</label>
+                            <input type="text" name="personal_non_pathological[exigencia_laboral]" class="form-control-modern"
+                                value="{{ old('personal_non_pathological.exigencia_laboral', $npat['exigencia_laboral'] ?? '') }}" placeholder="Ej: Moderada, Pesada...">
+                            <span style="font-size:11px;color:var(--text-muted);display:block;margin-top:4px;">Sugerencias: Sedentaria, Ligera, Moderada, Pesada, Repetitiva, Mixta</span>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Dieta</label>
                             <input type="text" name="personal_non_pathological[dieta]" class="form-control-modern"
-                                value="{{ old('personal_non_pathological.dieta', $npat['dieta']) }}">
+                                value="{{ old('personal_non_pathological.dieta', $npat['dieta']) }}" placeholder="Balanceada, Alta carbohidratos, Irregular...">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="grid-column: 1 / -1;">
                             <label class="form-label">AVD (Actividades de la Vida Diaria)</label>
                             <input type="text" name="personal_non_pathological[avd]" class="form-control-modern"
-                                value="{{ old('personal_non_pathological.avd', $npat['avd']) }}">
+                                value="{{ old('personal_non_pathological.avd', $npat['avd']) }}" placeholder="Independiente, Parcialmente dependiente, Dependiente">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Estado de Salud</label>
                             <input type="text" name="personal_non_pathological[estado_salud]" class="form-control-modern"
-                                value="{{ old('personal_non_pathological.estado_salud', $npat['estado_salud']) }}">
+                                value="{{ old('personal_non_pathological.estado_salud', $npat['estado_salud']) }}" placeholder="Bueno, Regular, Malo">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="grid-column: 1 / -1;">
                             <label class="form-label">Hábitos de Sueño</label>
                             <input type="text" name="personal_non_pathological[habitos_sueno]" class="form-control-modern"
-                                value="{{ old('personal_non_pathological.habitos_sueno', $npat['habitos_sueno']) }}">
+                                value="{{ old('personal_non_pathological.habitos_sueno', $npat['habitos_sueno']) }}" placeholder="7-8 hrs, <6 hrs, Sueño no reparador, Insomnio">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="grid-column: 1 / -1;">
                             <label class="form-label">Otros</label>
                             <input type="text" name="personal_non_pathological[otros]" class="form-control-modern"
                                 value="{{ old('personal_non_pathological.otros', $npat['otros']) }}">
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ═══ ANTECEDENTES HEREDOFAMILIARES (Sección 3) ═══ --}}
+                @php $fh = array_merge(\App\Models\MedicalRecord::familyHistoryDefaults(), $record->family_history ?? []); @endphp
+                <div class="glass-card mb-24">
+                    <div class="section-header">
+                        <i class="fas fa-heartbeat"></i>
+                        <h3>Antecedentes Heredofamiliares</h3>
+                        <small style="color:var(--text-muted); display:block; width:100%; margin-top:4px;">(Incluir información de abuelos, padres, hermanos o hijos)</small>
+                    </div>
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Diabetes</label>
+                            <input type="text" name="family_history[diabetes]" class="form-control-modern"
+                                value="{{ old('family_history.diabetes', $fh['diabetes']) }}" placeholder="DM1, DM2">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Cardíacas</label>
+                            <input type="text" name="family_history[cardiacas]" class="form-control-modern"
+                                value="{{ old('family_history.cardiacas', $fh['cardiacas']) }}" placeholder="HT, Infarto, Arritmias, Enf. coronaria">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Vasculares</label>
+                            <input type="text" name="family_history[vasculares]" class="form-control-modern"
+                                value="{{ old('family_history.vasculares', $fh['vasculares']) }}" placeholder="Várices, Trombosis, Insuf. venosa">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Pulmonares</label>
+                            <input type="text" name="family_history[pulmonares]" class="form-control-modern"
+                                value="{{ old('family_history.pulmonares', $fh['pulmonares']) }}" placeholder="Asma, EPOC, Bronquitis, Fibrosis">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Neoplasias</label>
+                            <input type="text" name="family_history[neoplasias]" class="form-control-modern"
+                                value="{{ old('family_history.neoplasias', $fh['neoplasias']) }}" placeholder="Cáncer de mama, colon, pulmonar">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Metab&oacute;licos</label>
+                            <input type="text" name="family_history[metabolicos]" class="form-control-modern"
+                                value="{{ old('family_history.metabolicos', $fh['metabolicos'] ?? $fh['epilepsia'] ?? '') }}" placeholder="Obesidad, Hipotiroidismo, Dislipidemia">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Síndromes</label>
+                            <input type="text" name="family_history[sindromes]" class="form-control-modern"
+                                value="{{ old('family_history.sindromes', $fh['sindromes']) }}" placeholder="Sx Down, Marfan, TEA, Ehlers-Danlos">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sistema Nervioso</label>
+                            <input type="text" name="family_history[sistema_nervioso]" class="form-control-modern"
+                                value="{{ old('family_history.sistema_nervioso', $fh['sistema_nervioso']) }}" placeholder="Parkinson, Alzheimer, Epilepsia, EVC">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Autoinmunes</label>
+                            <input type="text" name="family_history[autoinmunes]" class="form-control-modern"
+                                value="{{ old('family_history.autoinmunes', $fh['autoinmunes']) }}" placeholder="Artritis, Lupus, Esclerosis, Fibromialgia">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Otros</label>
+                            <input type="text" name="family_history[otros]" class="form-control-modern"
+                                value="{{ old('family_history.otros', $fh['otros']) }}" placeholder="Sí (Especificar)">
                         </div>
                     </div>
                 </div>
@@ -370,7 +636,7 @@
                         <div class="form-group">
                             <label class="form-label">Hospitalización</label>
                             <input type="text" name="personal_pathological[hospitalizacion]" class="form-control-modern"
-                                value="{{ old('personal_pathological.hospitalizacion', $pat['hospitalizacion']) }}">
+                                value="{{ old('personal_pathological.hospitalizacion', $pat['hospitalizacion']) }}" placeholder="Niega, Reciente (<1 año), Antigua (>1 año)">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Cirugías</label>
@@ -380,12 +646,12 @@
                         <div class="form-group">
                             <label class="form-label">Hábitos Tóxicos</label>
                             <input type="text" name="personal_pathological[habitos_toxicos]" class="form-control-modern"
-                                value="{{ old('personal_pathological.habitos_toxicos', $pat['habitos_toxicos']) }}">
+                                value="{{ old('personal_pathological.habitos_toxicos', $pat['habitos_toxicos']) }}" placeholder="Tabaco, Alcohol, Drogas">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Alergias</label>
                             <input type="text" name="personal_pathological[alergias]" class="form-control-modern"
-                                value="{{ old('personal_pathological.alergias', $pat['alergias']) }}">
+                                value="{{ old('personal_pathological.alergias', $pat['alergias']) }}" placeholder="Medicamentos, Alimentos, Ambientales">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Traumatismos</label>
@@ -415,18 +681,18 @@
                         <div class="form-group">
                             <label class="form-label">Reumatológicos</label>
                             <input type="text" name="personal_pathological[reumatologicos]" class="form-control-modern"
-                                value="{{ old('personal_pathological.reumatologicos', $pat['reumatologicos']) }}">
+                                value="{{ old('personal_pathological.reumatologicos', $pat['reumatologicos']) }}" placeholder="Artritis, Lupus">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Psiquiátricos</label>
                             <input type="text" name="personal_pathological[psiquiatricos]" class="form-control-modern"
-                                value="{{ old('personal_pathological.psiquiatricos', $pat['psiquiatricos']) }}">
+                                value="{{ old('personal_pathological.psiquiatricos', $pat['psiquiatricos']) }}" placeholder="Ansiedad, Depresión">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Enfermedades Congénitas</label>
                             <input type="text" name="personal_pathological[enfermedades_congenitas]"
                                 class="form-control-modern"
-                                value="{{ old('personal_pathological.enfermedades_congenitas', $pat['enfermedades_congenitas']) }}">
+                                value="{{ old('personal_pathological.enfermedades_congenitas', $pat['enfermedades_congenitas']) }}" placeholder="Cardíacas, Respiratorias, Neurológicas">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Medicamentos Actuales</label>
@@ -453,57 +719,57 @@
                         <div class="form-group">
                             <label class="form-label">Alteraciones Visuales</label>
                             <input type="text" name="systems_review[visual]" class="form-control-modern"
-                                value="{{ old('systems_review.visual', $sr['visual']) }}">
+                                value="{{ old('systems_review.visual', $sr['visual']) }}" placeholder="Visión borrosa, Miopía, Diplopía, Pérdida visual, Hemianopsia">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Alteraciones Auditivas</label>
                             <input type="text" name="systems_review[auditivo]" class="form-control-modern"
-                                value="{{ old('systems_review.auditivo', $sr['auditivo']) }}">
+                                value="{{ old('systems_review.auditivo', $sr['auditivo']) }}" placeholder="Hipoacusia, Tinnitus, Vértigo">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Alteraciones Sensoriales</label>
                             <input type="text" name="systems_review[sensorial]" class="form-control-modern"
-                                value="{{ old('systems_review.sensorial', $sr['sensorial']) }}">
+                                value="{{ old('systems_review.sensorial', $sr['sensorial']) }}" placeholder="Parestesias, Hipoestesia, Astereognosia, Alteración térmica...">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Musculoesquelético</label>
                             <input type="text" name="systems_review[musculoesqueletico]" class="form-control-modern"
-                                value="{{ old('systems_review.musculoesqueletico', $sr['musculoesqueletico']) }}">
+                                value="{{ old('systems_review.musculoesqueletico', $sr['musculoesqueletico']) }}" placeholder="Dolor localizado, Debilidad muscular, Limitación">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Alteraciones del S.N.</label>
                             <input type="text" name="systems_review[sistema_nervioso]" class="form-control-modern"
-                                value="{{ old('systems_review.sistema_nervioso', $sr['sistema_nervioso']) }}">
+                                value="{{ old('systems_review.sistema_nervioso', $sr['sistema_nervioso']) }}" placeholder="Cefalea frecuente, Pérdida de memoria, Migraña, Insomnio">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Metabólico</label>
                             <input type="text" name="systems_review[metabolico]" class="form-control-modern"
-                                value="{{ old('systems_review.metabolico', $sr['metabolico']) }}">
+                                value="{{ old('systems_review.metabolico', $sr['metabolico']) }}" placeholder="Tiroides, Crecimiento, Obesidad, Sed, Intolerancia frío/calor">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Respiratorio</label>
                             <input type="text" name="systems_review[respiratorio]" class="form-control-modern"
-                                value="{{ old('systems_review.respiratorio', $sr['respiratorio']) }}">
+                                value="{{ old('systems_review.respiratorio', $sr['respiratorio']) }}" placeholder="Disnea, disfonía, tos, síncope, COVID">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Cardiaco</label>
+                            <label class="form-label">Cardíaco</label>
                             <input type="text" name="systems_review[cardiaco]" class="form-control-modern"
-                                value="{{ old('systems_review.cardiaco', $sr['cardiaco']) }}">
+                                value="{{ old('systems_review.cardiaco', $sr['cardiaco']) }}" placeholder="Dolor torácico, Trombosis, Vasomotoras, Cianosis, Edema">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Gastrointestinal</label>
                             <input type="text" name="systems_review[gastrointestinal]" class="form-control-modern"
-                                value="{{ old('systems_review.gastrointestinal', $sr['gastrointestinal']) }}">
+                                value="{{ old('systems_review.gastrointestinal', $sr['gastrointestinal']) }}" placeholder="Dolor abdominal, Náuseas, Reflujo, Estreñimiento, Colon irritable">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Genitourinario</label>
                             <input type="text" name="systems_review[genitourinario]" class="form-control-modern"
-                                value="{{ old('systems_review.genitourinario', $sr['genitourinario']) }}">
+                                value="{{ old('systems_review.genitourinario', $sr['genitourinario']) }}" placeholder="Dolor pélvico, Incontinencia, Alteraciones menstruales, Dolor mamario">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Piel</label>
                             <input type="text" name="systems_review[piel]" class="form-control-modern"
-                                value="{{ old('systems_review.piel', $sr['piel']) }}">
+                                value="{{ old('systems_review.piel', $sr['piel']) }}" placeholder="Cicatrices, Lesiones, Cambios de coloración">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Otros</label>
@@ -520,561 +786,143 @@
                         <h3>Observaciones</h3>
                     </div>
                     <div class="form-group">
-                        <textarea name="observations" class="form-control-modern"
+                        <textarea name="observations" class="form-control-modern" spellcheck="true"
                             rows="4">{{ old('observations', $record->observations) }}</textarea>
                     </div>
                 </div>
 
                 {{-- ═══ SAVE BUTTON ═══ --}}
                 <div style="display:flex;justify-content:flex-end;gap:12px;margin-bottom:32px;">
-                    <button type="submit" class="btn-modern btn-primary">
+                    <button type="submit" id="medical-record-submit" class="btn-modern btn-primary">
                         <i class="fas fa-save"></i> Guardar Historia Clínica
                     </button>
                 </div>
             </form>
+            </div>
+            </div>
         @endif
     </div>
 
     {{-- ═══ TAB: CONSULTAS ═══ --}}
     <div wire:key="tab-wrapper-consultas" style="display: {{ $activeTab === 'consultas' ? 'block' : 'none' }};">
-        <div class="flex-between mb-16" wire:key="consultas-header">
-            <div style="font-size:14px;color:var(--text-secondary);">
-                {{ $patient->consultations->count() }} consulta(s) registrada(s)
-            </div>
-            <button class="btn-modern btn-primary btn-sm" wire:click="toggleConsultationForm">
-                <i class="fas fa-plus"></i> Nueva Consulta
-            </button>
-        </div>
+        <style>
+            .md-layout { display: flex; gap: 24px; align-items: flex-start; }
+            .md-list { flex: 0 0 35%; max-width: 380px; display: flex; flex-direction: column; gap: 12px; }
+            .md-detail { flex: 1; min-width: 0; }
+            
+            @media (max-width: 900px) {
+                .md-layout { display: block; }
+                .md-list.is-active { display: none; }
+                .md-detail.is-hidden { display: none; }
+                .md-list { max-width: none; }
+            }
+        </style>
 
-        {{-- New Consultation Form --}}
-        @if($showConsultationForm)
-            <div class="glass-card mb-24" wire:key="new-consultation-form">
-                <div class="card-header-custom">
-                    <div class="card-title"><i class="fas fa-notes-medical"></i> Nueva Consulta</div>
+        <div class="md-layout" wire:key="consultations-master-detail">
+            {{-- Master List --}}
+            <div class="md-list {{ $selectedConsultationId ? 'is-active' : '' }}">
+                <div class="flex-between mb-16" wire:key="consultas-header">
+                    <div style="font-size:14px;color:var(--text-secondary);">
+                        {{ $patient->consultations->count() }} episodio(s)
+                    </div>
+                    <button class="btn-modern btn-primary btn-sm" wire:click="createConsultation"
+                            wire:loading.attr="disabled" wire:target="createConsultation">
+                        <i class="fas fa-spinner fa-spin" wire:loading wire:target="createConsultation"></i>
+                        <i class="fas fa-plus" wire:loading.remove wire:target="createConsultation"></i>
+                        Nuevo Episodio
+                    </button>
                 </div>
-                <form action="{{ route('admin.consultations.store') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="patient_id" value="{{ $patient->id }}">
 
-                    {{-- Motivo de Consulta --}}
-                    <div class="form-group">
-                        <label class="form-label">Motivo de Consulta *</label>
-                        <textarea name="reason" class="form-control-modern" rows="2" required
-                            placeholder="Descripción del motivo de consulta"></textarea>
-                    </div>
-
-                    {{-- Padecimiento Actual --}}
-                    <details class="consultation-section" open>
-                        <summary class="section-header" style="cursor:pointer; list-style:none; user-select:none;">
-                            <i class="fas fa-heartbeat"></i>
-                            <h3 style="display:inline;">Padecimiento Actual</h3>
-                            <i class="fas fa-chevron-down"
-                                style="float:right; margin-top:4px; font-size:12px; color:var(--text-muted);"></i>
-                        </summary>
-                        <div class="grid grid-2" style="margin-top:16px;">
-                            <div class="form-group">
-                                <label class="form-label">Inicio</label>
-                                <input type="text" name="current_condition[inicio]" class="form-control-modern"
-                                    placeholder="¿Cuándo inició el padecimiento?">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Mecanismo de Lesión</label>
-                                <input type="text" name="current_condition[mecanismo_lesion]" class="form-control-modern"
-                                    placeholder="¿Cómo ocurrió?">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Evolución</label>
-                                <input type="text" name="current_condition[evolucion]" class="form-control-modern">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Tratamiento Actual</label>
-                                <input type="text" name="current_condition[tratamiento_actual]" class="form-control-modern">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Limitación del Movimiento</label>
-                                <input type="text" name="current_condition[limitacion_movimiento]"
-                                    class="form-control-modern">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">EVA (Escala Visual Analógica)</label>
-                                <input type="text" name="current_condition[eva]" class="form-control-modern"
-                                    placeholder="0-10">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Fuerza</label>
-                                <input type="text" name="current_condition[fuerza]" class="form-control-modern">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Actividad Física</label>
-                                <input type="text" name="current_condition[actividad_fisica]" class="form-control-modern">
-                            </div>
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label class="form-label">Comportamiento de los Síntomas (día/noche/parado/sentado)</label>
-                                <textarea name="current_condition[comportamiento_sintomas]" class="form-control-modern"
-                                    rows="2"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Pérdida/Ganancia de Peso Repentina</label>
-                                <input type="text" name="current_condition[cambio_peso]" class="form-control-modern">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Cambios en el Apetito</label>
-                                <input type="text" name="current_condition[cambios_apetito]" class="form-control-modern">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Debilidad o Astenia</label>
-                                <input type="text" name="current_condition[debilidad_astenia]" class="form-control-modern">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Incontinencia Fecal/Urinaria</label>
-                                <input type="text" name="current_condition[incontinencia]" class="form-control-modern">
-                            </div>
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label class="form-label">Otros (hematoma, postura, marcha, signos de inflamación)</label>
-                                <textarea name="current_condition[otros]" class="form-control-modern" rows="2"></textarea>
-                            </div>
-                        </div>
-                    </details>
-
-                    {{-- Exploración Física --}}
-                    <details class="consultation-section" style="margin-top:16px;">
-                        <summary class="section-header" style="cursor:pointer; list-style:none; user-select:none;">
-                            <i class="fas fa-weight"></i>
-                            <h3 style="display:inline;">Exploración Física</h3>
-                            <i class="fas fa-chevron-down"
-                                style="float:right; margin-top:4px; font-size:12px; color:var(--text-muted);"></i>
-                        </summary>
-                        <div class="grid grid-3" style="margin-top:16px;">
-                            <div class="form-group">
-                                <label class="form-label">Temperatura</label>
-                                <input type="text" name="physical_exam[temperatura]" class="form-control-modern"
-                                    placeholder="°C">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Frecuencia Cardíaca</label>
-                                <input type="text" name="physical_exam[frecuencia_cardiaca]" class="form-control-modern"
-                                    placeholder="lpm">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Tensión Arterial</label>
-                                <input type="text" name="physical_exam[tension_arterial]" class="form-control-modern"
-                                    placeholder="mmHg">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Frecuencia Respiratoria</label>
-                                <input type="text" name="physical_exam[frecuencia_respiratoria]" class="form-control-modern"
-                                    placeholder="rpm">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Saturación de Oxígeno</label>
-                                <input type="text" name="physical_exam[saturacion_oxigeno]" class="form-control-modern"
-                                    placeholder="%">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Peso (kg)</label>
-                                <input type="text" name="physical_exam[peso]" class="form-control-modern" placeholder="kg">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Altura (cm)</label>
-                                <input type="text" name="physical_exam[altura]" class="form-control-modern"
-                                    placeholder="cm">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Traslado</label>
-                                <input type="text" name="physical_exam[traslado]" class="form-control-modern">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Tipo de Marcha</label>
-                                <input type="text" name="physical_exam[tipo_marcha]" class="form-control-modern">
-                            </div>
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label class="form-label">Pruebas Complementarias (goniometría, Asia, Godet, pruebas
-                                    musculares)</label>
-                                <textarea name="physical_exam[pruebas_complementarias]" class="form-control-modern"
-                                    rows="2"></textarea>
-                            </div>
-                            <div class="form-group" style="grid-column: 1 / -1;">
-                                <label class="form-label">Otros</label>
-                                <textarea name="physical_exam[otros]" class="form-control-modern" rows="2"></textarea>
-                            </div>
-                        </div>
-                    </details>
-
-                    {{-- Diagnóstico y Plan de Tratamiento --}}
-                    <details class="consultation-section" style="margin-top:16px;">
-                        <summary class="section-header" style="cursor:pointer; list-style:none; user-select:none;">
-                            <i class="fas fa-clipboard-check"></i>
-                            <h3 style="display:inline;">Diagnóstico y Plan de Tratamiento</h3>
-                            <i class="fas fa-chevron-down"
-                                style="float:right; margin-top:4px; font-size:12px; color:var(--text-muted);"></i>
-                        </summary>
-                        <div style="margin-top:16px;">
-                            <div class="form-group">
-                                <label class="form-label">Notas de Estudios Previos</label>
-                                <textarea name="previous_studies_notes" class="form-control-modern" rows="2"
-                                    placeholder="Estudios de imagen previos, laboratorios, etc."></textarea>
-                            </div>
-                            <div class="grid grid-2">
-                                <div class="form-group">
-                                    <label class="form-label">Diagnóstico Fisioterapéutico</label>
-                                    <textarea name="diagnosis" class="form-control-modern" rows="2"></textarea>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Pronóstico</label>
-                                    <textarea name="prognosis" class="form-control-modern" rows="2"></textarea>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Objetivos de Tratamiento</label>
-                                <textarea name="treatment_objectives" class="form-control-modern" rows="2"></textarea>
-                            </div>
-                        </div>
-                    </details>
-
-                    {{-- Alta Fisioterapéutica --}}
-                    <details class="consultation-section" style="margin-top:16px;">
-                        <summary class="section-header" style="cursor:pointer; list-style:none; user-select:none;">
-                            <i class="fas fa-door-open"></i>
-                            <h3 style="display:inline;">Alta Fisioterapéutica</h3>
-                            <i class="fas fa-chevron-down"
-                                style="float:right; margin-top:4px; font-size:12px; color:var(--text-muted);"></i>
-                        </summary>
-                        <div class="grid grid-2" style="margin-top:16px;">
-                            <div class="form-group">
-                                <label class="form-label">Motivo de Alta</label>
-                                <textarea name="discharge_reason" class="form-control-modern" rows="2"></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Recomendaciones al Alta</label>
-                                <textarea name="discharge_recommendations" class="form-control-modern" rows="2"></textarea>
-                            </div>
-                        </div>
-                    </details>
-
-                    <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:24px;">
-                        <button type="button" class="btn-modern btn-secondary btn-sm"
-                            wire:click="toggleConsultationForm">Cancelar</button>
-                        <button type="submit" class="btn-modern btn-primary btn-sm">
-                            <i class="fas fa-save"></i> Guardar Consulta
-                        </button>
-                    </div>
-                </form>
-            </div>
-        @endif
-
-        {{-- Consultations Grid --}}
-        <div class="grid grid-2" wire:key="consultations-grid-container">
-            @forelse ($patient->consultations as $consulta)
-                <div class="consultation-card" wire:click="selectConsultation({{ $consulta->id }})"
-                    wire:key="consultation-{{ $consulta->id }}">
-                    <div class="flex-between mb-8">
-                        <span class="badge-modern badge-{{ $consulta->status }}">
-                            {{ $consulta->status === 'open' ? 'Activa' : ($consulta->status === 'in_progress' ? 'En curso' : 'Inactiva') }}
-                        </span>
-                        <span style="font-size:12px;color:var(--text-muted);">
-                            {{ $consulta->created_at->format('d/m/Y') }}
-                        </span>
-                    </div>
-                    <div style="font-weight:600;margin-bottom:4px;">{{ Str::limit($consulta->reason, 60) }}</div>
-                    @if($consulta->diagnosis)
-                        <div style="font-size:13px;color:var(--text-secondary);">{{ Str::limit($consulta->diagnosis, 80) }}
-                        </div>
-                    @endif
-                    <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">
-                        <i class="fas fa-sticky-note"></i> {{ $consulta->evolutionNotes->count() }} nota(s)
-                        &nbsp;·&nbsp;
-                        <i class="fas fa-image"></i> {{ $consulta->studies->count() }} estudio(s)
-                    </div>
-                </div>
-            @empty
-                <div style="grid-column:1/-1;">
-                    <div class="empty-state">
-                        <i class="fas fa-stethoscope"></i>
-                        <p>No hay consultas registradas</p>
-                    </div>
-                </div>
-            @endforelse
-        </div>
-
-        {{-- ═══ CONSULTATION DETAIL SLIDE PANEL ═══ --}}
-        <div wire:key="consultation-slide-panel-wrapper">
-            @php $selected = $selectedConsultationId ? $patient->consultations->find($selectedConsultationId) : null; @endphp
-
-            {{-- Overlay --}}
-            <div class="slide-panel-overlay" style="display: {{ $selected ? 'block' : 'none' }};"
-                wire:click="closeConsultation" wire:key="permanent-slide-panel-overlay"></div>
-
-            {{-- Panel --}}
-            <div class="slide-panel" style="transform: {{ $selected ? 'translateX(0)' : 'translateX(100%)' }};"
-                wire:key="permanent-slide-panel">
-
-                {{-- Static Top Container for Details --}}
-                <div wire:key="slide-panel-top-container">
-                    @if($selected)
-                        <div class="flex-between mb-24">
-                            <h3 style="margin:0;font-size:18px;font-weight:600;">
-                                <i class="fas fa-file-medical-alt" style="color:var(--accent-primary)"></i> Detalle de
-                                Consulta
-                            </h3>
-                            <button class="btn-icon" wire:click="closeConsultation">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-
-                        <div class="data-pair">
-                            <div class="data-label">Motivo de Consulta</div>
-                            <div class="data-value">{{ $selected->reason }}</div>
-                        </div>
-
-                        @if($selected->diagnosis)
-                            <div class="data-pair">
-                                <div class="data-label">Diagnóstico</div>
-                                <div class="data-value">{{ $selected->diagnosis }}</div>
-                            </div>
-                        @endif
-
-                        @if($selected->prognosis)
-                            <div class="data-pair">
-                                <div class="data-label">Pronóstico</div>
-                                <div class="data-value">{{ $selected->prognosis }}</div>
-                            </div>
-                        @endif
-
-                        @if($selected->treatment_objectives)
-                            <div class="data-pair">
-                                <div class="data-label">Objetivos de Tratamiento</div>
-                                <div class="data-value">{{ $selected->treatment_objectives }}</div>
-                            </div>
-                        @endif
-
-                        {{-- Current Condition JSON --}}
-                        @if($selected->current_condition && collect($selected->current_condition)->filter()->count())
-                            <details class="consultation-section" style="margin-top:16px;" open>
-                                <summary class="section-header" style="cursor:pointer; list-style:none; user-select:none;">
-                                    <i class="fas fa-heartbeat"></i>
-                                    <h3 style="display:inline;">Padecimiento Actual</h3>
-                                    <i class="fas fa-chevron-down"
-                                        style="float:right; margin-top:4px; font-size:12px; color:var(--text-muted);"></i>
-                                </summary>
-                                <div class="grid grid-2" style="margin-top:12px;">
-                                    @foreach($selected->current_condition as $key => $value)
-                                        @if($value)
-                                            <div class="data-pair" wire:key="json-data-{{ $selected->id }}-{{ $key }}">
-                                                <div class="data-label">{{ ucfirst(str_replace('_', ' ', $key)) }}</div>
-                                                <div class="data-value">{{ $value }}</div>
-                                            </div>
-                                        @endif
-                                    @endforeach
-                                </div>
-                            </details>
-                        @endif
-
-                        {{-- Physical Exam JSON --}}
-                        @if($selected->physical_exam && collect($selected->physical_exam)->filter()->count())
-                            <details class="consultation-section" style="margin-top:12px;">
-                                <summary class="section-header" style="cursor:pointer; list-style:none; user-select:none;">
-                                    <i class="fas fa-weight"></i>
-                                    <h3 style="display:inline;">Exploración Física</h3>
-                                    <i class="fas fa-chevron-down"
-                                        style="float:right; margin-top:4px; font-size:12px; color:var(--text-muted);"></i>
-                                </summary>
-                                <div class="grid grid-2" style="margin-top:12px;">
-                                    @foreach($selected->physical_exam as $key => $value)
-                                        @if($value)
-                                            <div class="data-pair" wire:key="physical-exam-{{ $selected->id }}-{{ $key }}">
-                                                <div class="data-label">{{ ucfirst(str_replace('_', ' ', $key)) }}</div>
-                                                <div class="data-value">{{ $value }}</div>
-                                            </div>
-                                        @endif
-                                    @endforeach
-                                </div>
-                            </details>
-                        @endif
-
-                        {{-- Notas de Estudios Previos --}}
-                        @if($selected->previous_studies_notes)
-                            <div class="data-pair" style="margin-top:20px;">
-                                <div class="data-label">Notas de Estudios Previos</div>
-                                <div class="data-value">{{ $selected->previous_studies_notes }}</div>
-                            </div>
-                        @endif
-
-                        {{-- Alta Fisioterapéutica --}}
-                        @if($selected->discharge_reason || $selected->discharge_recommendations)
-                            <details class="consultation-section" style="margin-top:12px;">
-                                <summary class="section-header" style="cursor:pointer; list-style:none; user-select:none;">
-                                    <i class="fas fa-door-open"></i>
-                                    <h3 style="display:inline;">Alta Fisioterapéutica</h3>
-                                    <i class="fas fa-chevron-down"
-                                        style="float:right; margin-top:4px; font-size:12px; color:var(--text-muted);"></i>
-                                </summary>
-                                <div style="margin-top:12px;">
-                                    @if($selected->discharge_reason)
-                                        <div class="data-pair">
-                                            <div class="data-label">Motivo de Alta</div>
-                                            <div class="data-value">{{ $selected->discharge_reason }}</div>
+                <div style="display:flex; flex-direction:column; gap:16px;">
+                    @php
+                        $consultasByYear = $patient->consultations
+                            ->sortByDesc('created_at')
+                            ->groupBy(fn($c) => $c->created_at->format('Y'));
+                    @endphp
+                    @forelse ($consultasByYear as $year => $consultasDelAnio)
+                        <div wire:key="year-group-{{ $year }}">
+                            <div style="font-size:13px; font-weight:700; color:var(--accent-primary); margin-bottom:8px;">{{ $year }}</div>
+                            <div style="display:flex; flex-direction:column; gap:12px;">
+                                @foreach ($consultasDelAnio as $consulta)
+                                    @php
+                                        $numSesiones = $consulta->evolutionNotes->count();
+                                        $ultimaSesion = $consulta->evolutionNotes->first();
+                                    @endphp
+                                    <div class="consultation-card"
+                                         wire:click="selectConsultation({{ $consulta->id }})"
+                                         style="cursor:pointer; transition:all 0.2s; {{ $selectedConsultationId == $consulta->id ? 'border-color:var(--accent-primary); background:rgba(var(--accent-primary-rgb),0.05); transform:translateX(4px); box-shadow: -4px 0 0 var(--accent-primary);' : '' }}"
+                                         wire:key="consultation-{{ $consulta->id }}">
+                                        <div class="flex-between mb-8">
+                                            <span class="badge-modern badge-{{ $consulta->status }}">
+                                                {{ $consulta->status_label }}
+                                            </span>
+                                            <span style="font-size:12px;color:var(--text-muted);">
+                                                {{ $consulta->created_at->format('d/m/Y') }}
+                                            </span>
                                         </div>
-                                    @endif
-                                    @if($selected->discharge_recommendations)
-                                        <div class="data-pair">
-                                            <div class="data-label">Recomendaciones al Alta</div>
-                                            <div class="data-value">{{ $selected->discharge_recommendations }}</div>
+                                        @if($consulta->diagnosis)
+                                            <div style="font-weight:600;margin-bottom:4px; font-size:14px;">{{ Str::limit($consulta->diagnosis, 50) }}</div>
+                                            <div style="font-size:13px;color:var(--text-secondary);">{{ Str::limit($consulta->reason, 60) }}</div>
+                                        @else
+                                            <div style="font-weight:600;margin-bottom:4px; font-size:14px;">{{ Str::limit($consulta->reason, 50) }}</div>
+                                        @endif
+                                        <div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); font-size:12px; color:var(--text-secondary);">
+                                            <div style="text-align:center;">
+                                                <div style="font-weight:700; font-size:14px; color:var(--text-primary);">{{ $numSesiones }}</div>
+                                                <div>sesion{{ $numSesiones === 1 ? '' : 'es' }}</div>
+                                            </div>
+                                            <div style="width:1px; height:24px; background:rgba(255,255,255,0.1);"></div>
+                                            <div style="text-align:center;">
+                                                <div style="font-weight:700; font-size:14px; color:var(--text-primary);">{{ $ultimaSesion?->date?->format('d/m/Y') ?? '—' }}</div>
+                                                <div>última sesión</div>
+                                            </div>
                                         </div>
-                                    @endif
-                                </div>
-                            </details>
-                        @endif
-                    @else
-                        <div style="padding: 20px;">Seleccione una consulta para ver sus detalles.</div>
-                    @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @empty
+                        <div class="empty-state" style="padding:32px 16px;">
+                            <i class="fas fa-stethoscope" style="font-size:32px;"></i>
+                            <p style="font-size:14px;">No hay episodios registrados</p>
+                        </div>
+                    @endforelse
                 </div>
+            </div>
 
-                {{-- Sub-Navigation for Panel --}}
-                <div class="tabs-modern"
-                    style="margin: 20px 0; padding: 4px; background: rgba(255,255,255,0.03); border-radius: 12px;"
-                    wire:key="panel-sub-tabs">
-                    <button class="tab-item {{ $consultationTab === 'evolution' ? 'active' : '' }}"
-                        wire:click="setConsultationTab('evolution')"
-                        style="padding: 8px 16px; font-size: 13px; flex: 1; border-radius: 8px;">
-                        <i class="fas fa-sticky-note"></i> Notas
-                    </button>
-                    <button class="tab-item {{ $consultationTab === 'studies' ? 'active' : '' }}"
-                        wire:click="setConsultationTab('studies')"
-                        style="padding: 8px 16px; font-size: 13px; flex: 1; border-radius: 8px;">
-                        <i class="fas fa-image"></i> Estudios
-                    </button>
-                    <button class="tab-item {{ $consultationTab === 'exercises' ? 'active' : '' }}"
-                        wire:click="setConsultationTab('exercises')"
-                        style="padding: 8px 16px; font-size: 13px; flex: 1; border-radius: 8px;">
-                        <i class="fas fa-running"></i> Ejercicios
-                    </button>
+            {{-- Detail View --}}
+            @php
+                $activeConsultation = $selectedConsultationId 
+                    ? $patient->consultations->where('id', $selectedConsultationId)->first() 
+                    : $patient->consultations->first();
+            @endphp
+
+            @if($activeConsultation)
+                <div class="md-detail" style="display: {{ $selectedConsultationId ? 'block' : 'none' }}; width: 100%;" wire:key="consultation-detail-container-{{ $activeConsultation->id }}">
+                    <livewire:consultation-detail 
+                        :consultation="$activeConsultation" 
+                        :isNew="$newlyCreatedConsultationId == $activeConsultation->id" 
+                        :wire:key="'detail-'.$activeConsultation->id" />
                 </div>
+            @endif
 
-                {{-- Static Bottom Container for Livewire Component --}}
-                <div style="margin-top:4px; display: {{ $selected ? 'block' : 'none' }};"
-                    wire:key="consultation-components-wrapper">
-                    @if($consultationTab === 'evolution')
-                        <livewire:evolution-notes :consultationId="$selectedConsultationId"
-                            wire:key="evolution-notes-{{ $selectedConsultationId ?? 'empty' }}" />
-                    @elseif($consultationTab === 'studies')
-                        <livewire:consultation-studies :consultationId="$selectedConsultationId"
-                            wire:key="consultation-studies-{{ $selectedConsultationId ?? 'empty' }}" />
-                    @else
-                        <livewire:consultation-exercises :consultationId="$selectedConsultationId"
-                            wire:key="consultation-exercises-{{ $selectedConsultationId ?? 'empty' }}" />
-                    @endif
+            <div class="md-detail {{ $activeConsultation ? 'is-hidden' : '' }}" style="display: {{ !$selectedConsultationId ? 'flex' : 'none' }}; flex-direction:column; justify-content:center; align-items:center; width: 100%;" wire:key="consultation-detail-empty">
+                <div class="empty-state glass-card" style="height: 100%; min-height: 400px; display:flex; flex-direction:column; justify-content:center; align-items:center; width: 100%;">
+                    <i class="fas fa-hand-pointer" style="font-size:48px; color:var(--text-muted); margin-bottom:16px;"></i>
+                    <p style="color:var(--text-secondary); font-size:16px;">Selecciona una consulta de la lista para ver sus detalles</p>
                 </div>
             </div>
         </div>
+
     </div>
 
-    {{-- ═══ TAB: PAGOS ═══ --}}
-    <div wire:key="tab-wrapper-pagos" style="display: {{ $activeTab === 'pagos' ? 'block' : 'none' }};">
-        <div class="flex-between mb-16">
-            <div style="font-size:14px;color:var(--text-secondary);">
-                {{ $patient->payments->count() }} pago(s) registrado(s)
-            </div>
-            <button class="btn-modern btn-primary btn-sm" wire:click="togglePaymentForm">
-                <i class="fas fa-plus"></i> Registrar Pago
-            </button>
-        </div>
-
-        {{-- New Payment Form --}}
-        @if($showPaymentForm)
-            <div class="glass-card mb-24" wire:key="new-payment-form">
-                <form action="{{ route('admin.payments.store') }}" method="POST">
-                    @csrf
-                    <input type="hidden" name="patient_id" value="{{ $patient->id }}">
-                    <div class="grid grid-3">
-                        <div class="form-group">
-                            <label class="form-label">Fecha *</label>
-                            <input type="date" name="date" class="form-control-modern" value="{{ date('Y-m-d') }}" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">N° Sesión</label>
-                            <input type="number" name="session_number" class="form-control-modern" min="1">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Método de Pago</label>
-                            <select name="payment_method" class="form-control-modern">
-                                <option value="efectivo">Efectivo</option>
-                                <option value="tarjeta">Tarjeta</option>
-                                <option value="transferencia">Transferencia</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="grid grid-3">
-                        <div class="form-group">
-                            <label class="form-label">Total a Pagar *</label>
-                            <input type="number" name="total_amount" class="form-control-modern" step="0.01" min="0"
-                                required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Importe Pagado *</label>
-                            <input type="number" name="amount_paid" class="form-control-modern" step="0.01" min="0"
-                                required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Terapeuta</label>
-                            <input type="text" name="therapist" class="form-control-modern"
-                                value="{{ auth()->user()->name }}">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Notas</label>
-                        <textarea name="notes" class="form-control-modern" rows="2"></textarea>
-                    </div>
-                    <div style="display:flex;gap:12px;justify-content:flex-end;">
-                        <button type="button" class="btn-modern btn-secondary btn-sm"
-                            wire:click="togglePaymentForm">Cancelar</button>
-                        <button type="submit" class="btn-modern btn-primary btn-sm"><i class="fas fa-save"></i>
-                            Guardar</button>
-                    </div>
-                </form>
-            </div>
-        @endif
-
-        {{-- Payments Table --}}
-        @if($patient->payments->count() > 0)
-            <div class="glass-card" style="padding:0; overflow:hidden;">
-                <table class="modern-table">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Sesión</th>
-                            <th>Método</th>
-                            <th>Total</th>
-                            <th>Pagado</th>
-                            <th>Saldo</th>
-                            <th>Terapeuta</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($patient->payments->sortByDesc('date') as $pago)
-                            <tr wire:key="payment-{{ $pago->id }}">
-                                <td>{{ $pago->date->format('d/m/Y') }}</td>
-                                <td>{{ $pago->session_number ?? '—' }}</td>
-                                <td>{{ ucfirst($pago->payment_method ?? '—') }}</td>
-                                <td style="font-weight:600;">${{ number_format($pago->total_amount, 2) }}</td>
-                                <td style="color:var(--success);">${{ number_format($pago->amount_paid, 2) }}</td>
-                                <td style="color:{{ $pago->balance > 0 ? 'var(--danger)' : 'var(--text-muted)' }};">
-                                    ${{ number_format($pago->balance, 2) }}
-                                </td>
-                                <td>{{ $pago->therapist ?? '—' }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @else
-            <div class="empty-state">
-                <i class="fas fa-credit-card"></i>
-                <p>No hay pagos registrados</p>
-            </div>
-        @endif
+    {{-- ═══ TAB: DOCUMENTOS CLINICOS ═══ --}}
+    <div wire:key="tab-wrapper-documentos" style="display: {{ $activeTab === 'documentos' ? 'block' : 'none' }};">
+        <livewire:clinical-documents :patientId="$patient->id" wire:key="clinical-documents-{{ $patient->id }}" />
     </div>
 
-    {{-- ═══ TAB: HISTORIAL ═══ --}}
+    {{-- ═══ TAB: HISTORIAL (solo administrador) ═══ --}}
+    @if(auth()->user()->admin)
     <div wire:key="tab-wrapper-historial" style="display: {{ $activeTab === 'historial' ? 'block' : 'none' }};">
         <div class="glass-card">
             <div class="section-header">
@@ -1112,6 +960,7 @@
             @endif
         </div>
     </div>
+    @endif
 
     {{-- ═══ COLLABORATOR MODAL ═══ --}}
     @if($showCollaboratorModal)
@@ -1196,5 +1045,4 @@
             display: none;
         }
     </style>
-
 </div>

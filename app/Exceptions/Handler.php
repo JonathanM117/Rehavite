@@ -36,6 +36,12 @@ class Handler extends ExceptionHandler
         'password_confirmation',
     ];
 
+    public function report(Throwable $e)
+    {
+        \Illuminate\Support\Facades\Log::error('FORCE EXCEPTION LOG: ' . get_class($e) . ' - ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+        parent::report($e);
+    }
+
     /**
      * Register the exception handling callbacks for the application.
      */

@@ -164,7 +164,7 @@
             labels: {!! json_encode($statusDistribution->keys()) !!},
             datasets: [{
                 data: {!! json_encode($statusDistribution->values()) !!},
-                backgroundColor: ['#10b981', '#f59e0b', '#94a3b8'],
+                backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#f43f5e', '#8b5cf6', '#6b7280'],
                 borderWidth: 0,
             }]
         },
@@ -172,6 +172,25 @@
             responsive: true,
             maintainAspectRatio: false,
             cutout: '65%',
+            onClick: (event, elements, chart) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const label = chart.data.labels[index];
+                    const labelMap = {
+                        'Activo': 'activo',
+                        'Seguimiento': 'seguimiento',
+                        'Alta clínica': 'alta_clinica',
+                        'Suspendido': 'suspendido',
+                        'Abandono terapéutico': 'abandono',
+                        'Referido': 'referido',
+                        'Inactivo': 'inactive',
+                        'Pendiente de eliminación': 'pending_deletion',
+                        'Archivado': 'archived'
+                    };
+                    const filterVal = labelMap[label] || label.toLowerCase();
+                    window.location.href = "{{ route('admin.patients.index') }}?statusFilter=" + filterVal;
+                }
+            }
         }
     });
 </script>

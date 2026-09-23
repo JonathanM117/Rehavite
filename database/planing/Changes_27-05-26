@@ -1,0 +1,43 @@
+- [ ] Agregar campo en Antecedentes personales no patológicos - Complexión física: Opciones: Delgada, Mediana, Robusta entre Animales domésticos y dieta.
+- [ ] Agregar campo en Antecedentes personales no patológicos - Nivel de estrés: Poner como sugerencia de texto: 0-10
+- [ ] Agregar campo en Antecedentes personales no patológicos - Exigencia laboral: Poner como sugerencia de texto: Sedentaria, Ligera, Moderada, Pesada, Repetitiva, Mixta
+- [ ] Dentro de Exploración física - Otros: Poner como sugerencia de texto: Examen postural
+- [ ] Agregar campo en creación de consulta Padecimiento actual - /Factores que alivian las molestias/ después de Comportamiento de los síntomas.
+- [ ] Agregar campo en creación de consulta Padecimiento actual - /Tipo de dolor/ antes de Comportamiento de los síntomas.  Poner como sugerencia de texto: Punzante, quemante, calambre, sordo.
+- [ ] Agregar campo en creación de consulta Diagnóstico - /Limitaciones funcionales & Restricciones en la participación/ después de Diagnóstico.
+- [ ] En Diagnóstico cambiar Pronóstico por Pronóstico funcional.
+- [ ] Dejar desplegados todos los menús por default.
+- [ ] Centrar texto en Notas de evolución “Aceptar”
+- [ ] Centrar texto en Notas de evolución “Cancelar”
+- [ ] Cambiar orden de “Antecedentes personales no patológicos”, colocarlo después de “Representante Legal”.
+- [ ] Texto en estudios de imagen no se visualiza completo al guardar.
+- [ ] Llevar a “Archivos del pacientes” los “Estudios” que se encuentran en CONSULTAS con un vínculo
+- [ ] Llevar a “Archivos del pacientes” los “Ejercicios” que se encuentran en CONSULTAS con un vínculo
+- [ ] En consultas poder visualizar el expediente y la edad del paciente
+- [ ] Visualización de consultas agregar la barra de “Expediente, Consultas, Archivos del paciente, Pagos, Historial”
+- [ ] Previsualizar documentos en la misma página, sin abrir una pestaña nueva
+- [ ] Expediente inmutable, no se pueden realizar modificaciones después de 48 horas en fisios, solo administrador
+- [ ] Confirmación “¿Deseas guardar la información antes de salir?”
+- [ ] Ventana emergente “Guardar antes de salir”
+- [ ] Editar datos de archivos Excel y PDF. Ubicación errónea de los datos.
+- [ ] Guardar archivos en Google Drive 
+- [ ] Revisar el botón Archivar. Que se elimine del historial de pacientes.
+- [ ] Historial de movimientos para fisios: Fisioterapeuta creó nota de evolución. Fisioterapeuta actualizó Antecedentes personales, Agregó plan de ejercicios, Se subió estudio de imagen.
+- [ ] Historial de movimientos para administrador: Inicio de sesión, dónde se da click, qué historias clínicas se abren, descarga de documentos, etc. - Clics en un lapso de tiempo.
+- [ ] Error al restaurar historial clínico archivado. Aparece que faltan datos. Al poner “volver” lleva a la carpeta de pacientes en general.
+- [ ] Que no se queden los campos disponibles para editar en Expediente clínico.
+- [ ] Agregar campo de “Teléfono propio”, “Contacto para confirmación de citas” dentro de la creación del paciente
+- [ ] Fisioterapeuta asignado “aministrador” cambiar a administrador.
+- [ ] Error “La edad no debe ser mayor de 130” que aparezca en la ventana de creación del paciente
+- [ ] Cambiar estado del paciente: Activo, Seguimiento, Alta clínica, Suspendido, Abandono terapéutico, Referido
+- [ ] Falta botón de “archivar expediente” en vista de administrador, podría colocarse al lado de eliminar.
+- [ ] Agregar los meses de edad en pacientes menores de 1 año
+- [ ] Cambiar datos de saturación, frecuencia cardíaca, TA y temperatura a español en visualización de las notas.
+- [ ] Agregar autocorrector de ortografía
+- [ ] Detalles clínicos, cambiar el orden de los campos.
+- [ ] En consultas todas las palabras se escriben en mayúscula la primera letra.
+- [ ] Dentro de creación de consulta agregar después de Diagnóstico y antes de Alta terapéutica la sección: Banderas clínicas: Banderas rojas, Banderas amarillas, Banderas azules, Banderas negras, Banderas blancas, Banderas verdes, Observaciones
+- [ ] Agregar flecha para filtrar en “última actividad” y por “fisioterapeuta” en el menú principal.
+- [x] 30 días para eliminar expedientes de forma definitiva
+- [x] Agregar al fisioterapeuta creador de la nota en “Notas de evolución”
+- [x] Cambiar estado de las notas de evolución: En valoración, Activo, Seguimiento, Alta clínica, Suspendido, Abandono terapéutico, Referido, Expediente inactivo

@@ -12,13 +12,17 @@ class PatientDetail extends Component
     public Patient $patient;
     public $activeTab = 'expediente';
     protected $queryString = ['activeTab'];
-    public $selectedConsultationId = null;
+    protected $listeners = [
+        'clearSelectedConsultation',
+        'consultationSaved' => 'handleConsultationSaved',
+        'cancelNewConsultation' => 'handleCancelNewConsultation',
+    ];
     public $showMedicalRecordForm = false;
     public $showConsultationForm = false;
-    public $showPaymentForm = false;
     public $showCollaboratorModal = false;
     public $selectedCollaboratorId = '';
-    public $consultationTab = 'evolution';
+    public $selectedConsultationId = null;
+    public $newlyCreatedConsultationId = null;
 
     public function mount(Patient $patient)
     {
@@ -36,7 +40,7 @@ class PatientDetail extends Component
             'consultations.evolutionNotes',
             'consultations.studies',
             'consultations.exercises',
-            'payments',
+            'clinicalDocuments',
             'collaborators',
         ]);
     }
@@ -61,7 +65,8 @@ class PatientDetail extends Component
 
     public function addCollaborator()
     {
-        if (!$this->selectedCollaboratorId) return;
+        if (!$this->selectedCollaboratorId)
+            return;
 
         $this->patient->collaborators()->attach($this->selectedCollaboratorId, [
             'granted_by' => auth()->id(),
@@ -89,38 +94,81 @@ class PatientDetail extends Component
     public function setTab($tab)
     {
         $this->activeTab = $tab;
-        $this->selectedConsultationId = null;
+        $this->selectedConsultationId = null; // Reset selection when changing tabs
+        $this->newlyCreatedConsultationId = null;
     }
 
     public function selectConsultation($id)
     {
         $this->selectedConsultationId = $id;
+        $this->newlyCreatedConsultationId = null;
     }
 
-    public function closeConsultation()
+    /*public function clearSelectedConsultation()
     {
+        if ($this->newlyCreatedConsultationId) {
+            $newConsultation = \App\Models\Consultation::find($this->newlyCreatedConsultationId);
+            if ($newConsultation && empty($newConsultation->reason)) {
+                $newConsultation->delete();
+                return redirect()->route('admin.patients.show', [$this->patient->id, 'activeTab' => 'consultas']);
+            }
+        }
         $this->selectedConsultationId = null;
-        $this->consultationTab = 'evolution'; // Reset to default when closing
+        $this->newlyCreatedConsultationId = null;
+        $this->patient->load('consultations'); // reload updates
+    }*/
+
+    public function clearSelectedConsultation()
+    {
+        // Ya no eliminamos el modelo aquí, solo limpiamos el estado visual
+        $this->selectedConsultationId = null;
+        $this->newlyCreatedConsultationId = null;
+        $this->patient->load('consultations'); // Recargamos para reflejar cambios
     }
 
-    public function setConsultationTab($tab)
+    public function handleConsultationSaved($id)
     {
-        $this->consultationTab = $tab;
+        if ($this->newlyCreatedConsultationId == $id) {
+            $this->newlyCreatedConsultationId = null;
+        }
+        $this->patient->load('consultations');
+    }
+
+    public function handleCancelNewConsultation($consultationId)
+    {
+        // Eliminar la consulta vacía desde el padre (evita conflicto de hidratación de Livewire)
+        $consultation = \App\Models\Consultation::find($consultationId);
+        if ($consultation && empty($consultation->reason)) {
+            $consultation->delete();
+        }
+
+        // Limpiar estado del padre
+        $this->selectedConsultationId = null;
+        $this->newlyCreatedConsultationId = null;
+
+        // Recargar consultas del paciente
+        $this->patient->load('consultations');
+    }
+
+    public function createConsultation()
+    {
+        $consultation = \App\Models\Consultation::create([
+            'patient_id' => $this->patient->id,
+            'user_id' => auth()->id(),
+            'reason' => '',
+            'status' => null
+        ]);
+
+        \App\Models\AuditLog::record('created', $consultation, 'Creó nueva consulta desde el perfil del paciente');
+
+        $this->patient->load('consultations');
+        $this->selectedConsultationId = $consultation->id;
+        $this->newlyCreatedConsultationId = $consultation->id;
     }
 
     public function toggleMedicalRecordForm()
     {
         $this->showMedicalRecordForm = !$this->showMedicalRecordForm;
-    }
-
-    public function toggleConsultationForm()
-    {
-        $this->showConsultationForm = !$this->showConsultationForm;
-    }
-
-    public function togglePaymentForm()
-    {
-        $this->showPaymentForm = !$this->showPaymentForm;
     }
 
     public function render()

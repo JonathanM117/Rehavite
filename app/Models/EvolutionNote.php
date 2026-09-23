@@ -11,6 +11,7 @@ class EvolutionNote extends Model
 
     protected $fillable = [
         'consultation_id',
+        'user_id',
         'date',
         'session_number',
         'description',
@@ -18,6 +19,7 @@ class EvolutionNote extends Model
         'plan',
         'treatment',
         'additional_notes',
+        'comments',
     ];
 
     protected $casts = [
@@ -30,6 +32,11 @@ class EvolutionNote extends Model
     public function consultation()
     {
         return $this->belongsTo(Consultation::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 
     // ─── Helpers ─────────────────────────────────────

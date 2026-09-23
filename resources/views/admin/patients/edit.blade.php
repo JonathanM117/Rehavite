@@ -29,19 +29,30 @@
 
             <div class="grid grid-2">
                 <div class="form-group">
-                    <label class="form-label">Correo Electr&oacute;nico</label>
-                    <input type="email" name="email" class="form-control-modern" value="{{ old('email', $patient->email) }}">
+                    <label class="form-label">Correo Electr&oacute;nico *</label>
+                    <input type="email" name="email" class="form-control-modern" value="{{ old('email', $patient->email) }}" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Tel&eacute;fono</label>
-                    <input type="text" name="phone" class="form-control-modern" value="{{ old('phone', $patient->phone) }}">
+                    <label class="form-label">Tel&eacute;fono *</label>
+                    <input type="text" name="phone" class="form-control-modern" value="{{ old('phone', $patient->phone) }}" required>
+                </div>
+            </div>
+
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Tel&eacute;fono Propio</label>
+                    <input type="text" name="phone_own" class="form-control-modern" value="{{ old('phone_own', $patient->phone_own) }}" placeholder="Celular del paciente">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contacto para Confirmaci&oacute;n de Citas</label>
+                    <input type="text" name="phone_confirmation" class="form-control-modern" value="{{ old('phone_confirmation', $patient->phone_confirmation) }}" placeholder="Familiar o tutor responsable">
                 </div>
             </div>
 
             <div class="grid grid-3">
                 <div class="form-group">
-                    <label class="form-label">Fecha de Nacimiento</label>
-                    <input type="date" name="birth_date" class="form-control-modern" value="{{ old('birth_date', $patient->birth_date?->format('Y-m-d')) }}">
+                    <label class="form-label">Fecha de Nacimiento *</label>
+                    <input type="date" name="birth_date" class="form-control-modern" value="{{ old('birth_date', $patient->birth_date?->format('Y-m-d')) }}" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">G&eacute;nero *</label>
@@ -55,15 +66,18 @@
                 <div class="form-group">
                     <label class="form-label">Estado</label>
                     <select name="status" class="form-control-modern">
-                        <option value="active" {{ old('status', $patient->status) == 'active' ? 'selected' : '' }}>Activo</option>
-                        <option value="inactive" {{ old('status', $patient->status) == 'inactive' ? 'selected' : '' }}>Inactivo</option>
-                        <option value="discharged" {{ old('status', $patient->status) == 'discharged' ? 'selected' : '' }}>Alta</option>
+                        <option value="activo" {{ in_array(old('status', $patient->status), ['activo','active']) ? 'selected' : '' }}>Activo</option>
+                        <option value="seguimiento" {{ old('status', $patient->status) == 'seguimiento' ? 'selected' : '' }}>Seguimiento</option>
+                        <option value="alta_clinica" {{ in_array(old('status', $patient->status), ['alta_clinica','discharged']) ? 'selected' : '' }}>Alta cl&iacute;nica</option>
+                        <option value="suspendido" {{ old('status', $patient->status) == 'suspendido' ? 'selected' : '' }}>Suspendido</option>
+                        <option value="abandono" {{ old('status', $patient->status) == 'abandono' ? 'selected' : '' }}>Abandono terap&eacute;utico</option>
+                        <option value="referido" {{ old('status', $patient->status) == 'referido' ? 'selected' : '' }}>Referido</option>
                     </select>
                 </div>
             </div>
 
             <div class="form-group">
-                <label class="form-label">Diagn&oacute;stico</label>
+                <label class="form-label">Padecimiento</label>
                 <textarea name="diagnosis" class="form-control-modern" rows="3">{{ old('diagnosis', $patient->diagnosis) }}</textarea>
             </div>
 

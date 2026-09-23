@@ -12,6 +12,9 @@
 
     @if($showForm)
     <div class="glass-card mb-24" wire:key="exercise-form-wrapper" style="border: 1px dashed var(--accent-primary);">
+        <div style="font-weight:600;margin-bottom:16px;font-size:14px;">
+            {{ $editingExerciseId ? 'Editar Ejercicio' : 'Subir Nuevo Ejercicio' }}
+        </div>
         <form wire:submit.prevent="saveExercise">
             <div class="grid grid-2">
                 <div class="form-group">
@@ -38,22 +41,27 @@
                  x-on:livewire-upload-finish="uploading = false"
                  x-on:livewire-upload-error="uploading = false; alert('Error al subir el archivo. Asegúrate de que sea un PDF y que no supere los 10MB.')"
                  x-on:livewire-upload-progress="progress = $event.detail.progress">
-                <label class="form-label">Archivo PDF *</label>
+                <label class="form-label">Archivo PDF {{ $editingExerciseId ? '(Dejar vacío para conservar el actual)' : '*' }}</label>
                 <div class="file-upload-wrapper">
                     <input type="file" wire:model="file" class="form-control-modern" id="exercise-file-input" accept=".pdf">
                     <div wire:loading wire:target="file" style="margin-top:8px; font-size:12px; color:var(--accent-primary);">
                         <i class="fas fa-spinner fa-spin"></i> Subiendo archivo...
                     </div>
                 </div>
+                <!-- Barra de Progreso Alpine JS -->
+                <div x-show="uploading" style="margin-top: 10px; width: 100%; background-color: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; height: 6px;">
+                    <div style="height: 100%; background-color: var(--accent-primary); transition: width 0.3s;" x-bind:style="'width: ' + progress + '%'"></div>
+                </div>
                 <small style="color:var(--text-muted); font-size:11px; margin-top:4px; display:block;">Solo se permiten archivos PDF (máx. 10MB)</small>
                 @error('file') <span class="error-text">{{ $message }}</span> @enderror
             </div>
 
-            <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
-                <button type="submit" class="btn-modern btn-primary" wire:loading.attr="disabled" wire:target="file, saveExercise">
+            <div style="display:flex;gap:12px;justify-content:center;margin-top:20px;">
+                <button type="button" class="btn-modern btn-secondary btn-sm" wire:click="cancelEdit" style="flex:1; max-width:200px; text-align:center; justify-content:center;">Cancelar</button>
+                <button type="submit" class="btn-modern btn-primary btn-sm" x-bind:disabled="uploading" wire:loading.attr="disabled" wire:target="file, saveExercise" style="flex:1; max-width:200px; text-align:center; justify-content:center;" x-bind:style="uploading ? 'opacity: 0.5; cursor: not-allowed;' : ''">
                     <i class="fas fa-save" wire:loading.remove wire:target="saveExercise"></i>
                     <i class="fas fa-spinner fa-spin" wire:loading wire:target="saveExercise"></i>
-                    Guardar Ejercicio
+                    {{ $editingExerciseId ? 'Actualizar Ejercicio' : 'Guardar Ejercicio' }}
                 </button>
             </div>
         </form>
@@ -95,10 +103,13 @@
                                 <i class="fas fa-download"></i> Descargar
                             </a>
                             @endif
-                            <a href="{{ Storage::url($exercise->file_path) }}#toolbar=0" target="_blank" class="btn-modern btn-secondary btn-sm" style="flex:1; justify-content:center; margin-left:{{ auth()->user()->admin ? '8px' : '0' }};">
+                            <a href="{{ Storage::url($exercise->file_path) }}?v={{ time() }}#toolbar=0" target="_blank" class="btn-modern btn-secondary btn-sm" style="flex:1; justify-content:center; margin-left:{{ auth()->user()->admin ? '8px' : '0' }};">
                                 <i class="fas fa-eye"></i> Ver PDF
                             </a>
-                            <button wire:click="deleteExercise({{ $exercise->id }})" wire:confirm="¿Seguro que deseas eliminar este ejercicio?" class="btn-modern btn-sm" style="background:rgba(220,53,69,0.1); color:var(--danger); border:1px solid rgba(220,53,69,0.2); margin-left:8px;">
+                            <button wire:click="editExercise({{ $exercise->id }})" class="btn-modern btn-sm" style="background:rgba(59,130,246,0.1); color:#3b82f6; border:1px solid rgba(59,130,246,0.2); margin-left:8px;" title="Editar">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <button wire:click="deleteExercise({{ $exercise->id }})" wire:confirm="¿Seguro que deseas eliminar este ejercicio?" class="btn-modern btn-sm" style="background:rgba(220,53,69,0.1); color:var(--danger); border:1px solid rgba(220,53,69,0.2); margin-left:4px;" title="Eliminar">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>

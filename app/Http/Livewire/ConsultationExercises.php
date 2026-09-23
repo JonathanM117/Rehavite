@@ -15,7 +15,6 @@ class ConsultationExercises extends Component
 
     #[Reactive]
     public $consultationId;
-    public $consultation;
     public $exercises = [];
     public $showForm = false;
 
@@ -25,12 +24,18 @@ class ConsultationExercises extends Component
     public $description;
     public $file;
 
-    protected $rules = [
-        'date' => 'required|date',
-        'title' => 'nullable|string|max:255',
-        'description' => 'nullable|string|max:500',
-        'file' => 'required|file|mimes:pdf|max:10240', // 10MB max, solo PDF
-    ];
+    // Edit mode
+    public $editingExerciseId = null;
+
+    protected function rules()
+    {
+        return [
+            'date' => 'required|date',
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:500',
+            'file' => ($this->editingExerciseId ? 'nullable' : 'required') . '|file|mimes:pdf|max:10240',
+        ];
+    }
 
     protected $messages = [
         'file.required' => 'Debes seleccionar un archivo PDF.',
@@ -66,12 +71,12 @@ class ConsultationExercises extends Component
     {
         if (!$this->consultationId) {
             $this->exercises = [];
-            $this->consultation = null;
             return;
         }
 
-        $this->consultation = Consultation::with('exercises')->findOrFail($this->consultationId);
-        $this->exercises = $this->consultation->exercises()->orderByDesc('date')->get();
+        $this->exercises = Exercise::where('consultation_id', $this->consultationId)
+            ->orderByDesc('date')
+            ->get();
     }
 
     public function toggleForm()
@@ -84,6 +89,7 @@ class ConsultationExercises extends Component
 
     public function resetForm()
     {
+        $this->editingExerciseId = null;
         $this->date = date('Y-m-d');
         $this->title = null;
         $this->description = null;
@@ -91,27 +97,58 @@ class ConsultationExercises extends Component
         $this->resetErrorBag();
     }
 
+    public function editExercise($id)
+    {
+        $exercise = Exercise::find($id);
+        if (!$exercise) return;
+
+        $this->editingExerciseId = $id;
+        $this->date = $exercise->date?->format('Y-m-d');
+        $this->title = $exercise->title;
+        $this->description = $exercise->description;
+        $this->file = null;
+        $this->showForm = true;
+    }
+
+    public function cancelEdit()
+    {
+        $this->resetForm();
+        $this->showForm = false;
+    }
+
     public function saveExercise()
     {
         $this->validate();
 
-        // Storage Path: exercises/{consultation_id}/{filename}
-        $filename = time() . '_' . $this->file->getClientOriginalName();
-        $path = $this->file->storeAs('exercises/' . $this->consultationId, $filename, 'public');
-
-        Exercise::create([
+        $data = [
             'consultation_id' => $this->consultationId,
             'date' => $this->date,
             'title' => $this->title,
             'description' => $this->description,
-            'file_path' => $path,
-        ]);
+        ];
+
+        if ($this->file) {
+            $filename = time() . '_' . $this->file->getClientOriginalName();
+            $path = $this->file->storeAs('exercises/' . $this->consultationId, $filename, 'public');
+            $data['file_path'] = $path;
+        }
+
+        if ($this->editingExerciseId) {
+            $exercise = Exercise::find($this->editingExerciseId);
+            // Delete old file if new file uploaded
+            if ($this->file && Storage::disk('public')->exists($exercise->file_path)) {
+                Storage::disk('public')->delete($exercise->file_path);
+            }
+            $exercise->update($data);
+            session()->flash('success', 'Ejercicio actualizado correctamente.');
+        } else {
+            Exercise::create($data);
+            session()->flash('success', 'Ejercicio guardado correctamente.');
+        }
 
         $this->resetForm();
         $this->showForm = false;
         $this->loadData();
-
-        session()->flash('success', 'Ejercicio guardado correctamente.');
     }
 
     public function deleteExercise($id)

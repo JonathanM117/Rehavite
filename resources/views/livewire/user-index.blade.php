@@ -9,12 +9,6 @@
         </a>
     </div>
 
-    @if (session('success'))
-        <div class="alert-modern alert-success mb-24">
-            <i class="fas fa-check-circle"></i> {{ session('success') }}
-        </div>
-    @endif
-
     {{-- Filters --}}
     <div class="glass-card mb-24" style="padding:16px;">
         <div class="grid grid-3" style="gap:16px; align-items: flex-end;">

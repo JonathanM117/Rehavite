@@ -27,6 +27,7 @@ class MedicalRecord extends Model
         'personal_non_pathological',
         'personal_pathological',
         'systems_review',
+        'pediatric_history',
     ];
 
     protected $casts = [
@@ -35,7 +36,31 @@ class MedicalRecord extends Model
         'personal_non_pathological' => 'array',
         'personal_pathological' => 'array',
         'systems_review' => 'array',
+        'pediatric_history' => 'array',
     ];
+
+    public static function pediatricHistoryDefaults(): array
+    {
+        return [
+            'is_pediatric' => false,
+            'gestational_age' => '',
+            'birth_weight' => '',
+            'birth_height' => '',
+            'apgar' => '',
+            'delivery_type' => '',
+            'complications' => '',
+            'neonatal_hospitalization' => '',
+            'milestone_head_control' => '',
+            'milestone_sitting' => '',
+            'milestone_crawling' => '',
+            'milestone_standing' => '',
+            'milestone_walking' => '',
+            'language_development' => '',
+            'vaccinations' => '',
+            'reflexes' => '',
+            'other_development' => '',
+        ];
+    }
 
     // ─── Relationships ───────────────────────────────
 
@@ -57,7 +82,7 @@ class MedicalRecord extends Model
             'vasculares' => '',
             'pulmonares' => '',
             'neoplasias' => '',
-            'epilepsia' => '',
+            'metabolicos' => '',
             'sindromes' => '',
             'sistema_nervioso' => '',
             'autoinmunes' => '',
@@ -77,6 +102,9 @@ class MedicalRecord extends Model
             'transporte' => '',
             'nivel_socioeconomico' => '',
             'animales_domesticos' => '',
+            'complexion_fisica' => '',
+            'nivel_estres' => '',
+            'exigencia_laboral' => '',
             'dieta' => '',
             'avd' => '',
             'estado_salud' => '',

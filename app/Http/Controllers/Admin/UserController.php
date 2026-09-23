@@ -48,6 +48,14 @@ class UserController extends Controller
             'admin' => $request->boolean('admin'),
         ]);
 
+        // Send registration/confirmation email to therapist
+        try {
+            Mail::to($user->email)->send(new \App\Mail\TherapistCreatedMail($user->name, $user->email, $validated['password']));
+        } catch (\Exception $e) {
+            // Log warning or flash secondary message but do not crash the registration flow
+            session()->flash('warning', 'El usuario se creó con éxito, pero no se pudo enviar el correo de confirmación: ' . $e->getMessage());
+        }
+
         return redirect()
             ->route('admin.users.index')
             ->with('success', 'Usuario registrado con éxito');
@@ -97,6 +105,14 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $assignedPatients = \App\Models\Patient::withTrashed()->where('user_id', $user->id)->count();
+
+        if ($assignedPatients > 0) {
+            return redirect()
+                ->route('admin.users.index')
+                ->with('error', "No se puede eliminar a {$user->name}: todavía tiene {$assignedPatients} paciente(s) asignado(s). Reasigna a esos pacientes a otro fisioterapeuta desde la edición de cada paciente antes de eliminar esta cuenta.");
+        }
+
         $user->delete();
 
         return redirect()

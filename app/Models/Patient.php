@@ -19,15 +19,32 @@ class Patient extends Model
         'last_name',
         'email',
         'phone',
+        'phone_own',
+        'phone_confirmation',
         'birth_date',
         'gender',
         'diagnosis',
         'status',
+        'deletion_requested_by',
+        'deletion_requested_at',
     ];
 
     protected $casts = [
-        'birth_date' => 'date',
+        'birth_date'             => 'date',
+        'deletion_requested_at'  => 'datetime',
     ];
+
+    // ─── Status Helpers ──────────────────────────────
+
+    public function isPendingDeletion(): bool
+    {
+        return $this->status === 'pending_deletion';
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->status === 'archived';
+    }
 
     // ─── Relationships ───────────────────────────────
 
@@ -41,14 +58,29 @@ class Patient extends Model
         return $this->hasOne(MedicalRecord::class);
     }
 
+    public function deletionRequestedBy()
+    {
+        return $this->belongsTo(User::class, 'deletion_requested_by');
+    }
+
     public function consultations()
     {
         return $this->hasMany(Consultation::class);
     }
 
+    public function clinicalDocuments()
+    {
+        return $this->hasMany(ClinicalDocument::class)->orderBy('date', 'desc');
+    }
+
     public function payments()
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function clinicalPhotos()
+    {
+        return $this->hasMany(ClinicalPhoto::class)->orderBy('date', 'desc');
     }
 
     /**
@@ -96,6 +128,61 @@ class Patient extends Model
     public function getAgeAttribute(): ?int
     {
         return $this->birth_date?->age;
+    }
+
+    public function getAgeLabelAttribute(): string
+    {
+        if (!$this->birth_date) {
+            return 'No especificada';
+        }
+
+        $now = now();
+        $diff = $this->birth_date->diff($now);
+
+        if ($diff->y >= 1) {
+            return $diff->y . ' ' . ($diff->y === 1 ? 'año' : 'años');
+        }
+
+        // Less than a year: show months and days
+        $months = $diff->m;
+        $days = $diff->d;
+
+        $label = '';
+        if ($months > 0) {
+            $label .= $months . ' ' . ($months === 1 ? 'mes' : 'meses');
+        }
+        if ($days > 0) {
+            if ($label !== '') {
+                $label .= ' y ';
+            }
+            $label .= $days . ' ' . ($days === 1 ? 'día' : 'días');
+        }
+
+        if ($label === '') {
+            return 'Recién nacido';
+        }
+
+        return $label;
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        $labels = [
+            'activo' => 'Activo',
+            'active' => 'Activo',
+            'seguimiento' => 'Seguimiento',
+            'alta_clinica' => 'Alta clínica',
+            'discharged' => 'Alta clínica',
+            'suspendido' => 'Suspendido',
+            'abandono' => 'Abandono terapéutico',
+            'abandono_terapeutico' => 'Abandono terapéutico',
+            'referido' => 'Referido',
+            'inactive' => 'Inactivo',
+            'pending_deletion' => 'Pendiente de eliminación',
+            'archived' => 'Archivado',
+        ];
+
+        return $labels[strtolower($this->status)] ?? ucfirst(str_replace('_', ' ', $this->status ?? ''));
     }
 
     public function getExpedienteIdAttribute(): string

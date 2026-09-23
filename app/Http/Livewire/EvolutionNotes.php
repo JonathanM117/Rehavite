@@ -11,7 +11,6 @@ class EvolutionNotes extends Component
 {
     #[Reactive]
     public $consultationId;
-    public $consultation;
     public $notes = [];
     public $showForm = false;
 
@@ -23,6 +22,7 @@ class EvolutionNotes extends Component
     public $plan;
     public $treatment;
     public $additional_notes;
+    public $comments;
 
     // Edit mode
     public $editingNoteId = null;
@@ -45,25 +45,25 @@ class EvolutionNotes extends Component
     {
         if (!$this->consultationId) {
             $this->notes = [];
-            $this->consultation = null;
             return;
         }
 
-        $this->consultation = Consultation::with('evolutionNotes')
-            ->findOrFail($this->consultationId);
-        $this->notes = $this->consultation->evolutionNotes->sortByDesc('date');
+        $this->notes = EvolutionNote::with('user')
+            ->where('consultation_id', $this->consultationId)
+            ->get()
+            ->sortByDesc('date');
     }
 
     public function toggleForm()
     {
         $this->showForm = !$this->showForm;
-        if (!$this->showForm) {
-            $this->resetForm();
-        }
+        $this->resetForm();
     }
 
     public function saveNote()
     {
+
+
         $this->validate([
             'date' => 'required|date',
             'session_number' => 'nullable|integer|min:1',
@@ -71,10 +71,12 @@ class EvolutionNotes extends Component
             'plan' => 'nullable|string|max:2000',
             'treatment' => 'nullable|string|max:2000',
             'additional_notes' => 'nullable|string|max:2000',
+            'comments' => 'nullable|string|max:2000',
         ]);
 
         $data = [
             'consultation_id' => $this->consultationId,
+            'user_id' => auth()->id(),
             'date' => $this->date,
             'session_number' => $this->session_number,
             'description' => $this->description,
@@ -82,24 +84,32 @@ class EvolutionNotes extends Component
             'plan' => $this->plan,
             'treatment' => $this->treatment,
             'additional_notes' => $this->additional_notes,
+            'comments' => $this->comments,
         ];
 
         if ($this->editingNoteId) {
             $note = EvolutionNote::find($this->editingNoteId);
             $note->update($data);
         } else {
-            EvolutionNote::create($data);
+            $note = EvolutionNote::create($data);
         }
+
+        $savedId = $note->id;
 
         $this->resetForm();
         $this->showForm = false;
         $this->loadData();
+
+        $this->dispatch('note-saved', id: $savedId);
     }
 
     public function editNote($noteId)
     {
         $note = EvolutionNote::find($noteId);
-        if (!$note) return;
+        if (!$note)
+            return;
+
+
 
         $this->editingNoteId = $noteId;
         $this->date = $note->date?->format('Y-m-d');
@@ -109,12 +119,17 @@ class EvolutionNotes extends Component
         $this->plan = $note->plan;
         $this->treatment = $note->treatment;
         $this->additional_notes = $note->additional_notes;
+        $this->comments = $note->comments;
         $this->showForm = true;
     }
 
     public function deleteNote($id)
     {
-        EvolutionNote::find($id)?->delete();
+        $note = EvolutionNote::find($id);
+        if ($note) {
+
+            $note->delete();
+        }
         $this->loadData();
     }
 
@@ -127,13 +142,14 @@ class EvolutionNotes extends Component
     private function resetForm()
     {
         $this->editingNoteId = null;
-        $this->date = null;
-        $this->session_number = null;
+        $this->date = date('Y-m-d');
+        $this->session_number = (collect($this->notes)->max('session_number') ?: 0) + 1;
         $this->description = null;
         $this->vital_signs = EvolutionNote::vitalSignsDefaults();
         $this->plan = null;
         $this->treatment = null;
         $this->additional_notes = null;
+        $this->comments = null;
     }
 
     public function render()

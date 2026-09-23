@@ -31,4 +31,14 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Google Drive (Service Account)
+    // Set GOOGLE_DRIVE_KEY_FILE to the path of the downloaded JSON key file, OR
+    // paste the entire JSON content into GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON.
+    'google_drive' => [
+        'key_file'             => env('GOOGLE_DRIVE_KEY_FILE'),
+        'service_account_json' => env('GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON'),
+        'folder_id'            => env('GOOGLE_DRIVE_FOLDER_ID'),
+    ],
+
 ];
+

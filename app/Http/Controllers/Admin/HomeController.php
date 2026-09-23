@@ -49,7 +49,16 @@ class HomeController extends Controller
 
         $statusDistribution = Patient::selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
-            ->pluck('total', 'status');
+            ->get()
+            ->groupBy(function ($item) {
+                $patient = new Patient(['status' => $item->status]);
+                return $patient->status_label;
+            })
+            ->map(function ($group) {
+                return $group->sum('total');
+            });
+
+        $therapists = auth()->user()->admin ? User::orderBy('name')->get() : collect();
 
         return view('admin.index', compact(
             'totalUsers',
@@ -62,7 +71,8 @@ class HomeController extends Controller
             'newPatientsThisMonth',
             'totalConsultations',
             'openConsultations',
-            'statusDistribution'
+            'statusDistribution',
+            'therapists'
         ));
     }
 }

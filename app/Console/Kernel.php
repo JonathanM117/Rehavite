@@ -12,7 +12,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Limpiar pacientes de la papelera que llevan más de 15 días
+        $schedule->command('patients:clean-trash')->daily();
+
+        // Respaldo de base de datos semanal encriptado
+        $schedule->command('db:backup')->weekly();
     }
 
     /**

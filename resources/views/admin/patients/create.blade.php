@@ -29,19 +29,19 @@
 
             <div class="grid grid-2">
                 <div class="form-group">
-                    <label class="form-label">Correo Electr&oacute;nico</label>
-                    <input type="email" name="email" class="form-control-modern" value="{{ old('email') }}">
+                    <label class="form-label">Correo Electr&oacute;nico *</label>
+                    <input type="email" name="email" class="form-control-modern" value="{{ old('email') }}" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Tel&eacute;fono</label>
-                    <input type="text" name="phone" class="form-control-modern" value="{{ old('phone') }}">
+                    <label class="form-label">Tel&eacute;fono *</label>
+                    <input type="text" name="phone" class="form-control-modern" value="{{ old('phone') }}" required>
                 </div>
             </div>
 
             <div class="grid grid-2">
                 <div class="form-group">
-                    <label class="form-label">Fecha de Nacimiento</label>
-                    <input type="date" name="birth_date" class="form-control-modern" value="{{ old('birth_date') }}">
+                    <label class="form-label">Fecha de Nacimiento *</label>
+                    <input type="date" name="birth_date" class="form-control-modern" value="{{ old('birth_date') }}" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">G&eacute;nero *</label>
@@ -54,8 +54,19 @@
                 </div>
             </div>
 
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label class="form-label">Tel&eacute;fono Propio</label>
+                    <input type="text" name="phone_own" class="form-control-modern" value="{{ old('phone_own') }}" placeholder="Celular del paciente">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contacto para Confirmaci&oacute;n de Citas</label>
+                    <input type="text" name="phone_confirmation" class="form-control-modern" value="{{ old('phone_confirmation') }}" placeholder="Familiar o tutor responsable">
+                </div>
+            </div>
+
             <div class="form-group">
-                <label class="form-label">Diagn&oacute;stico Inicial</label>
+                <label class="form-label">Padecimiento Inicial</label>
                 <textarea name="diagnosis" class="form-control-modern" rows="3">{{ old('diagnosis') }}</textarea>
             </div>
 
