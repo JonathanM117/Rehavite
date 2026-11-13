@@ -14,10 +14,6 @@
 
 <br />
 
-> **Live Demo:** [admin.rehavite.com](https://admin.rehavite.com)
-
-<br />
-
 </div>
 
 ---
