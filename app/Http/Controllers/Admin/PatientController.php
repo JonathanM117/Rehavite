@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
-use App\Models\MedicalRecord;
 use App\Models\User;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
@@ -23,9 +22,107 @@ class PatientController extends Controller
         return view('admin.patients.create', compact('therapists'));
     }
 
+    /**
+     * Reglas de validación compartidas por store() y update() para todos los
+     * campos de la historia clínica, ahora unificados en la tabla patients.
+     */
+    private function clinicalRecordRules(): array
+    {
+        return [
+            'manual_age'          => ['nullable', 'integer', 'min:0', 'max:130'],
+            'marital_status'      => ['nullable', 'string', 'max:50'],
+            'address'             => ['nullable', 'string', 'max:500'],
+            'laterality'          => ['nullable', 'string', 'max:50'],
+            'occupation'          => ['nullable', 'string', 'max:255'],
+            'economic_dependency' => ['nullable', 'string', 'max:255'],
+            'primary_caregiver'   => ['nullable', 'string', 'max:255'],
+            'guardian_required'   => ['nullable', 'boolean'],
+            'guardian_name'       => ['nullable', 'string', 'max:255'],
+            'guardian_birth_date' => ['nullable', 'date'],
+            'guardian_age'        => ['nullable', 'integer', 'min:0'],
+            'guardian_gender'     => ['nullable', 'string', 'max:50'],
+            'observations'        => ['nullable', 'string', 'max:2000'],
+            'family_history'              => ['nullable', 'array'],
+            'personal_non_pathological'   => ['nullable', 'array'],
+            'personal_pathological'       => ['nullable', 'array'],
+            'systems_review'               => ['nullable', 'array'],
+            'pediatric_history'             => ['nullable', 'array'],
+
+            // Rediseño del Expediente
+            'body_regions'             => ['nullable', 'array'],
+            'body_regions.*'           => ['string', 'max:50'],
+            'phone_owner'              => ['nullable', 'string', 'max:50'],
+            'alt_contact_name'         => ['nullable', 'string', 'max:255'],
+            'alt_contact_relationship' => ['nullable', 'string', 'max:100'],
+            'alt_contact_phone'        => ['nullable', 'string', 'max:20'],
+            'referral_source'          => ['nullable', 'string', 'max:100'],
+            'referral_source_other'    => ['nullable', 'string', 'max:255'],
+            'referring_doctor'         => ['nullable', 'string', 'max:255'],
+            'emergency_contact_name'            => ['nullable', 'string', 'max:255'],
+            'emergency_contact_phone'           => ['nullable', 'string', 'max:20'],
+            'emergency_contact_relationship'    => ['nullable', 'string', 'max:100'],
+            'birth_place'              => ['nullable', 'string', 'max:255'],
+            'street_address'           => ['nullable', 'string', 'max:255'],
+            'neighborhood'             => ['nullable', 'string', 'max:255'],
+            'municipality'             => ['nullable', 'string', 'max:255'],
+            'zone'                     => ['nullable', 'string', 'max:50'],
+            'housing_type'             => ['nullable', 'string', 'max:100'],
+            'transportation'           => ['nullable', 'string', 'max:100'],
+            'architectural_barriers'   => ['nullable', 'array'],
+            'architectural_barriers.*' => ['string', 'max:100'],
+            'education_level'          => ['nullable', 'string', 'max:100'],
+            'physical_build'           => ['nullable', 'string', 'max:50'],
+            'stress_level'             => ['nullable', 'integer', 'min:0', 'max:10'],
+            'work_demand'              => ['nullable', 'string', 'max:50'],
+            'diet'                     => ['nullable', 'string', 'max:100'],
+            'adl_independence'         => ['nullable', 'string', 'max:100'],
+            'perceived_health'         => ['nullable', 'string', 'max:50'],
+            'sleep_habits'             => ['nullable', 'string', 'max:100'],
+            'pets'                     => ['nullable', 'array'],
+            'pets.*'                   => ['string', 'max:50'],
+            'non_pathological_notes'   => ['nullable', 'string', 'max:2000'],
+            'medical_history_matrix'       => ['nullable', 'array'],
+            'medical_history_deny_family'  => ['nullable', 'boolean'],
+            'medical_history_deny_patient' => ['nullable', 'boolean'],
+            'medical_history_notes'        => ['nullable', 'string', 'max:2000'],
+            'symptoms_review'          => ['nullable', 'array'],
+            'toxic_habits'             => ['nullable', 'array'],
+            'toxic_habits.*'           => ['string', 'max:50'],
+            'allergies'                => ['nullable', 'array'],
+            'allergies.*'              => ['string', 'max:50'],
+            'allergies_detail'         => ['nullable', 'string', 'max:2000'],
+            'hospitalizations'         => ['nullable', 'array'],
+            'surgeries'                => ['nullable', 'array'],
+            'traumas'                  => ['nullable', 'array'],
+            'current_medications'      => ['nullable', 'array'],
+            'events_notes'             => ['nullable', 'string', 'max:2000'],
+        ];
+    }
+
+    /**
+     * Las casillas de la matriz de antecedentes y del interrogatorio llegan
+     * como '1'/ausente; se normalizan a booleanos reales antes de guardarlas.
+     */
+    private function normalizeClinicalBooleans(array $data): array
+    {
+        if (isset($data['medical_history_matrix']) && is_array($data['medical_history_matrix'])) {
+            foreach ($data['medical_history_matrix'] as $key => $row) {
+                $data['medical_history_matrix'][$key]['fam'] = !empty($row['fam']);
+                $data['medical_history_matrix'][$key]['pac'] = !empty($row['pac']);
+            }
+        }
+        if (isset($data['symptoms_review']) && is_array($data['symptoms_review'])) {
+            foreach ($data['symptoms_review'] as $key => $row) {
+                $data['symptoms_review'][$key]['presente'] = !empty($row['presente']);
+            }
+        }
+
+        return $data;
+    }
+
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validated = $request->validate(array_merge([
             'name'        => ['required', 'string', 'max:100'],
             'last_name'   => ['required', 'string', 'max:100'],
             'email'       => ['required', 'email', 'max:150'],
@@ -36,7 +133,7 @@ class PatientController extends Controller
             'gender'      => ['required', 'in:masculino,femenino,otro,no_especificado'],
             'diagnosis'   => ['nullable', 'string', 'max:2000'],
             'created_at'  => ['nullable', 'date', 'after:1900-01-01', 'before_or_equal:today'],
-        ], [
+        ], $this->clinicalRecordRules()), [
             'birth_date.required' => 'Corrige la fecha de nacimiento: este campo es obligatorio.',
             'birth_date.date' => 'Corrige la fecha de nacimiento: el formato no es válido.',
             'birth_date.after' => 'Corrige la fecha de nacimiento: no puede ser de hace más de 130 años.',
@@ -49,9 +146,17 @@ class PatientController extends Controller
             $validated['user_id'] = auth()->id();
         }
 
+        $validated['guardian_required'] = $request->boolean('guardian_required');
+        $validated['medical_history_deny_family'] = $request->boolean('medical_history_deny_family');
+        $validated['medical_history_deny_patient'] = $request->boolean('medical_history_deny_patient');
+        $validated = $this->normalizeClinicalBooleans($validated);
+
         $patient = Patient::make($validated);
         if (auth()->user()->admin && $request->filled('created_at')) {
             $patient->created_at = $request->input('created_at');
+        }
+        if (empty($patient->manual_age) && $patient->birth_date) {
+            $patient->manual_age = $patient->birth_date->age;
         }
         $patient->save();
 
@@ -86,15 +191,9 @@ class PatientController extends Controller
                 ->with('error', 'No tienes permiso para ver este paciente.');
         }
 
-        $patient->load(['medicalRecord', 'consultations.evolutionNotes', 'consultations.studies', 'payments']);
+        $patient->load(['consultations.evolutionNotes', 'consultations.studies', 'payments']);
 
         return view('admin.patients.show', compact('patient'));
-    }
-
-    public function edit(Patient $patient)
-    {
-        $therapists = User::orderBy('name')->get();
-        return view('admin.patients.edit', compact('patient', 'therapists'));
     }
 
     public function update(Request $request, Patient $patient)
@@ -116,6 +215,23 @@ class PatientController extends Controller
         if ($request->has('user_id'))    $rules['user_id']    = ['nullable', 'exists:users,id'];
         if ($request->has('created_at')) $rules['created_at'] = ['nullable', 'date', 'after:1900-01-01', 'before_or_equal:today'];
 
+        // Las casillas (body_regions, antecedentes, interrogatorio, etc.) no se
+        // envían cuando todas quedan sin marcar, así que un envío completo del
+        // formulario de Expediente (marcado por este campo oculto) debe poder
+        // vaciarlas explícitamente en vez de dejar el dato anterior intacto.
+        $isExpedienteFormSubmit = $request->has('expediente_form');
+        $arrayContainerFields = [
+            'body_regions', 'architectural_barriers', 'pets', 'toxic_habits', 'allergies',
+            'medical_history_matrix', 'symptoms_review',
+            'hospitalizations', 'surgeries', 'traumas', 'current_medications',
+        ];
+
+        foreach ($this->clinicalRecordRules() as $field => $fieldRules) {
+            if ($request->has($field) || ($isExpedienteFormSubmit && in_array($field, $arrayContainerFields, true))) {
+                $rules[$field] = $fieldRules;
+            }
+        }
+
         $validated = $request->validate($rules, [
             'birth_date.required' => 'Corrige la fecha de nacimiento: este campo es obligatorio.',
             'birth_date.date' => 'Corrige la fecha de nacimiento: el formato no es válido.',
@@ -127,11 +243,31 @@ class PatientController extends Controller
             unset($validated['user_id']);
         }
 
+        if ($request->has('guardian_required')) {
+            $validated['guardian_required'] = $request->boolean('guardian_required');
+        }
+        if ($request->has('medical_history_deny_family')) {
+            $validated['medical_history_deny_family'] = $request->boolean('medical_history_deny_family');
+        }
+        if ($request->has('medical_history_deny_patient')) {
+            $validated['medical_history_deny_patient'] = $request->boolean('medical_history_deny_patient');
+        }
+        if ($isExpedienteFormSubmit) {
+            foreach ($arrayContainerFields as $field) {
+                if (!$request->has($field)) {
+                    $validated[$field] = [];
+                }
+            }
+        }
+        $validated = $this->normalizeClinicalBooleans($validated);
+
         $patient->fill($validated);
         if (auth()->user()->admin && $request->filled('created_at')) {
             $patient->created_at = $request->input('created_at');
         }
         $patient->save();
+
+        AuditLog::record('updated', $patient, 'Expediente actualizado por ' . auth()->user()->name);
 
         return redirect()
             ->route('admin.patients.show', $patient)

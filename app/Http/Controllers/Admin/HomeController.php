@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
-use App\Models\MedicalRecord;
 use App\Models\User;
 use App\Models\Consultation;
 

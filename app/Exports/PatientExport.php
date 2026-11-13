@@ -22,7 +22,6 @@ class PatientExport
     public function __construct(Patient $patient)
     {
         $this->patient = $patient->load([
-            'medicalRecord',
             'user',
             'consultations.evolutionNotes',
         ]);
@@ -51,7 +50,7 @@ class PatientExport
     {
         $sheet = $this->spreadsheet->getActiveSheet()->setTitle('Datos Personales');
         $p = $this->patient;
-        $r = $p->medicalRecord;
+        $r = $p;
 
         $rows = [
             ['EXPEDIENTE CLÍNICO — REHAVITÉ', ''],
@@ -97,7 +96,7 @@ class PatientExport
     protected function buildSheet2_Antecedentes(): void
     {
         $sheet = $this->spreadsheet->createSheet()->setTitle('Antecedentes');
-        $r = $this->patient->medicalRecord;
+        $r = $this->patient;
 
         $row = 1;
 

@@ -36,7 +36,6 @@ class PatientDetail extends Component
 
         $this->patient = $patient->load([
             'user',
-            'medicalRecord',
             'consultations.evolutionNotes',
             'consultations.studies',
             'consultations.exercises',

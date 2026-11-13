@@ -1,13 +1,30 @@
 @php
-    $record = $patient->medicalRecord;
-    $fh = array_merge(\App\Models\MedicalRecord::familyHistoryDefaults(), $record->family_history ?? []);
-    $npat = array_merge(\App\Models\MedicalRecord::personalNonPathologicalDefaults(), $record->personal_non_pathological ?? []);
-    $pat = array_merge(\App\Models\MedicalRecord::personalPathologicalDefaults(), $record->personal_pathological ?? []);
-    $sr = array_merge(\App\Models\MedicalRecord::systemsReviewDefaults(), $record->systems_review ?? []);
-    
-    // Helper para mostrar un valor o un placeholder
-    $val = function($value) {
+    $regionesCat = \App\Support\ExpedienteCatalogo::regiones();
+    $antecedentesCat = \App\Support\ExpedienteCatalogo::antecedentes();
+    $interrogatorioCat = \App\Support\ExpedienteCatalogo::interrogatorio();
+
+    $matrix = array_replace_recursive(\App\Models\Patient::medicalHistoryMatrixDefaults(), $patient->medical_history_matrix ?? []);
+    $symptoms = array_replace_recursive(\App\Models\Patient::symptomsReviewDefaults(), $patient->symptoms_review ?? []);
+    $bodyRegions = $patient->body_regions ?? [];
+    $archBarriers = $patient->architectural_barriers ?? [];
+    $pets = $patient->pets ?? [];
+    $toxicHabits = $patient->toxic_habits ?? [];
+    $allergiesList = $patient->allergies ?? [];
+
+    $val = function ($value) {
         return empty($value) ? '<span style="color:var(--text-muted);">&mdash;</span>' : e($value);
+    };
+    $tags = function (array $values) use ($val) {
+        return empty($values) ? $val(null) : e(implode(', ', $values));
+    };
+    $listado = function (?array $rows, string $labelCampo) use ($val) {
+        if (empty($rows)) return $val(null);
+        return collect($rows)->map(function ($row) use ($labelCampo) {
+            $detalle = e($row['detalle'] ?? '');
+            $extra = trim(($row['mes'] ?? '') . ' ' . (isset($row['cuando']) && !in_array($row['cuando'], ['', null], true) ? '' : ''));
+            $dosis = !empty($row['dosis']) ? ' — ' . e($row['dosis']) : '';
+            return "<li>{$detalle}{$dosis}</li>";
+        })->implode('');
     };
 @endphp
 
@@ -19,17 +36,35 @@
         </button>
     </div>
 
-    {{-- Datos Personales --}}
+    {{-- Identificación --}}
     <div style="margin-bottom: 32px;">
-        <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Datos Personales</h3>
+        <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Identificación</h3>
         <div class="grid grid-3">
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Edad:</strong> {!! $val($record->age) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Estado Civil:</strong> {!! $val($record->marital_status) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Domicilio:</strong> {!! $val($record->address) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Lateralidad:</strong> {!! $val($record->laterality) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Escolaridad / Ocupación:</strong> {!! $val($record->occupation) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Dependencia Económica:</strong> {!! $val($record->economic_dependency) !!}</div>
-            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Cuidador Primario:</strong> {!! $val($record->primary_caregiver) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Nombre:</strong> {!! $val($patient->name) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Apellidos:</strong> {!! $val($patient->last_name) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Correo Electrónico:</strong> {!! $val($patient->email) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Fecha de Nacimiento:</strong> {!! $val($patient->birth_date?->format('d/m/Y')) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Género:</strong> {!! $val($patient->gender_label) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Edad:</strong> {!! $val($patient->manual_age ?? $patient->age) !!}</div>
+            @if(auth()->user()->admin)
+                <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Fisioterapeuta Asignado:</strong> {!! $val($patient->user->name ?? null) !!}</div>
+                <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Fecha de Ingreso:</strong> {!! $val($patient->created_at?->format('d/m/Y')) !!}</div>
+            @endif
+            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Región corporal:</strong> {!! $tags(collect($bodyRegions)->map(fn($k) => $regionesCat[$k]['n'] ?? $k)->all()) !!}</div>
+            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Padecimiento / Diagnóstico principal:</strong> {!! $val($patient->diagnosis) !!}</div>
+        </div>
+    </div>
+
+    {{-- Contacto --}}
+    <div style="margin-bottom: 32px;">
+        <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Contacto</h3>
+        <div class="grid grid-3">
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Teléfono:</strong> {!! $val($patient->phone) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">¿De quién es este número?:</strong> {!! $val($patient->phone_owner) !!}</div>
+            <div></div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Contacto alterno:</strong> {!! $val($patient->alt_contact_name) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Parentesco:</strong> {!! $val($patient->alt_contact_relationship) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Teléfono alterno:</strong> {!! $val($patient->alt_contact_phone) !!}</div>
         </div>
     </div>
 
@@ -37,40 +72,40 @@
     <div class="grid grid-2" style="margin-bottom: 32px; gap: 24px;">
         <div>
             <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Fuente de Referencia</h3>
-            <div style="margin-bottom: 12px;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">¿Cómo se enteró?:</strong> {!! $val($npat['referencia_como_entero'] ?? '') !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Médico Remitente:</strong> {!! $val($npat['referencia_medico'] ?? '') !!}</div>
+            <div style="margin-bottom: 12px;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">¿Cómo se enteró?:</strong> {!! $val($patient->referral_source === 'Otro' ? $patient->referral_source_other : $patient->referral_source) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Médico Remitente:</strong> {!! $val($patient->referring_doctor) !!}</div>
         </div>
         <div>
             <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Contacto de Emergencia</h3>
-            <div style="margin-bottom: 12px;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Nombre:</strong> {!! $val($npat['emergencia_nombre'] ?? '') !!}</div>
-            <div style="margin-bottom: 12px;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Teléfono:</strong> {!! $val($npat['emergencia_telefono'] ?? '') !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Parentesco:</strong> {!! $val($npat['emergencia_parentesco'] ?? '') !!}</div>
+            <div style="margin-bottom: 12px;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Nombre:</strong> {!! $val($patient->emergency_contact_name) !!}</div>
+            <div style="margin-bottom: 12px;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Teléfono:</strong> {!! $val($patient->emergency_contact_phone) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Parentesco:</strong> {!! $val($patient->emergency_contact_relationship) !!}</div>
         </div>
     </div>
 
     {{-- Representante Legal --}}
+    @if($patient->guardian_required || $patient->guardian_name)
     <div style="margin-bottom: 32px;">
         <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Representante Legal</h3>
-        <div class="grid grid-2">
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Nombre:</strong> {!! $val($record->guardian_name) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Fecha Nac. / Edad:</strong> {!! $val($record->guardian_birth_date ? $record->guardian_birth_date->format('d/m/Y') : null) !!} ({{ $record->guardian_age ?? '--' }} años)</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Sexo:</strong> {!! $val($record->guardian_gender) !!}</div>
+        <div class="grid grid-3">
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Nombre:</strong> {!! $val($patient->guardian_name) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Fecha de Nacimiento:</strong> {!! $val($patient->guardian_birth_date?->format('d/m/Y')) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Sexo:</strong> {!! $val($patient->guardian_gender) !!}</div>
         </div>
     </div>
+    @endif
 
     {{-- Sección Pediátrica --}}
     @php
-        $ped = $record->pediatric_history ?? [];
-        $hasPediatricData = !empty($ped['is_pediatric']) || 
-                            !empty($ped['gestational_age']) || 
-                            !empty($ped['milestone_head_control']) || 
-                            !empty($ped['milestone_sitting']) || 
-                            !empty($ped['milestone_walking']);
+        $ped = $patient->pediatric_history ?? [];
+        $hasPediatricData = !empty($ped['is_pediatric']) || !empty($ped['gestational_age']) ||
+                             !empty($ped['milestone_head_control']) || !empty($ped['milestone_sitting']) ||
+                             !empty($ped['milestone_walking']);
     @endphp
     @if($hasPediatricData)
     <div style="margin-bottom: 32px; border: 1px dashed rgba(20,184,166,0.3); padding: 16px; border-radius: 8px; background: rgba(20,184,166,0.02);">
         <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--accent-primary); border-bottom:1px solid rgba(20,184,166,0.2); padding-bottom:8px;">Antecedentes Pediátricos y de Desarrollo</h3>
-        
+
         <h4 style="font-size:13px; font-weight:600; margin-bottom: 8px; color:var(--text-secondary);">Antecedentes Perinatales</h4>
         <div class="grid grid-3 mb-16">
             <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Edad Gestacional:</strong> {!! $val($ped['gestational_age'] ?? '') !!}</div>
@@ -101,87 +136,107 @@
     </div>
     @endif
 
+    {{-- Entorno y Situación Social --}}
+    <div style="margin-bottom: 32px;">
+        <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Entorno y Situación Social</h3>
+        <div class="grid grid-3">
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Lugar de Nacimiento:</strong> {!! $val($patient->birth_place) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Domicilio:</strong> {!! $val(trim(($patient->street_address ?? '') . ' ' . ($patient->neighborhood ?? ''))) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Municipio / Zona:</strong> {!! $val(trim(($patient->municipality ?? '') . ($patient->zone ? ' (' . $patient->zone . ')' : ''))) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Casa Habitación:</strong> {!! $val($patient->housing_type) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Transporte:</strong> {!! $val($patient->transportation) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Escolaridad:</strong> {!! $val($patient->education_level) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Ocupación:</strong> {!! $val($patient->occupation) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Dependencia Económica:</strong> {!! $val($patient->economic_dependency) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Cuidador Primario:</strong> {!! $val($patient->primary_caregiver) !!}</div>
+            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Barreras Arquitectónicas:</strong> {!! $tags($archBarriers) !!}</div>
+            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Animales Domésticos:</strong> {!! $tags($pets) !!}</div>
+        </div>
+    </div>
+
     {{-- Antecedentes Personales No Patológicos --}}
     <div style="margin-bottom: 32px;">
         <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Antecedentes Personales No Patológicos</h3>
         <div class="grid grid-3">
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Lugar Nacimiento:</strong> {!! $val($npat['lugar_nacimiento']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Residencia Actual:</strong> {!! $val($npat['residencia_actual']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Casa Habitación:</strong> {!! $val($npat['casa_habitacion']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Transporte:</strong> {!! $val($npat['transporte']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Nivel Socioeconómico:</strong> {!! $val($npat['nivel_socioeconomico']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Animales Domésticos:</strong> {!! $val($npat['animales_domesticos']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Complexión Física:</strong> {!! $val($npat['complexion_fisica']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Nivel de Estrés:</strong> {!! $val($npat['nivel_estres']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Exigencia Laboral:</strong> {!! $val($npat['exigencia_laboral']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Dieta:</strong> {!! $val($npat['dieta']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">AVD:</strong> {!! $val($npat['avd']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Estado de Salud:</strong> {!! $val($npat['estado_salud']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Hábitos de Sueño:</strong> {!! $val($npat['habitos_sueno']) !!}</div>
-            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Otros:</strong> {!! $val($npat['otros']) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Lateralidad:</strong> {!! $val($patient->laterality) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Estado Civil:</strong> {!! $val($patient->marital_status) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Complexión Física:</strong> {!! $val($patient->physical_build) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Exigencia Laboral:</strong> {!! $val($patient->work_demand) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Dieta:</strong> {!! $val($patient->diet) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">AVD:</strong> {!! $val($patient->adl_independence) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Estado de Salud:</strong> {!! $val($patient->perceived_health) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Hábitos de Sueño:</strong> {!! $val($patient->sleep_habits) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Nivel de Estrés:</strong> {!! $val($patient->stress_level !== null ? $patient->stress_level . '/10' : null) !!}</div>
+            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Otros:</strong> {!! $val($patient->non_pathological_notes) !!}</div>
         </div>
     </div>
 
-    {{-- Antecedentes Heredofamiliares --}}
+    {{-- Antecedentes Heredofamiliares y Personales Patológicos --}}
     <div style="margin-bottom: 32px;">
-        <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Antecedentes Heredofamiliares</h3>
-        <div class="grid grid-3">
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Diabetes:</strong> {!! $val($fh['diabetes']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Cardíacas:</strong> {!! $val($fh['cardiacas']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Vasculares:</strong> {!! $val($fh['vasculares']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Pulmonares:</strong> {!! $val($fh['pulmonares']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Neoplasias:</strong> {!! $val($fh['neoplasias']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Metabólicos:</strong> {!! $val($fh['metabolicos']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Síndromes:</strong> {!! $val($fh['sindromes']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Sistema Nervioso:</strong> {!! $val($fh['sistema_nervioso']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Autoinmunes:</strong> {!! $val($fh['autoinmunes']) !!}</div>
-            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Otros:</strong> {!! $val($fh['otros']) !!}</div>
-        </div>
+        <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Antecedentes Heredofamiliares y Personales Patológicos</h3>
+        @if($patient->medical_history_deny_family && $patient->medical_history_deny_patient)
+            <p style="color:var(--text-muted); font-size:13px;">Niega antecedentes familiares y personales.</p>
+        @else
+            <div class="grid grid-2">
+                @foreach($antecedentesCat as $key => $cond)
+                    @php $row = $matrix[$key] ?? []; @endphp
+                    @if(!empty($row['fam']) || !empty($row['pac']))
+                        <div>
+                            <strong style="color:var(--text-secondary);font-size:12px;display:block;">{{ $cond['n'] }}:</strong>
+                            @if(!empty($row['fam']))<span>Familiar{{ !empty($row['fam_detalle']) ? ' ('.e($row['fam_detalle']).')' : '' }}</span>@endif
+                            @if(!empty($row['fam']) && !empty($row['pac']))<span> · </span>@endif
+                            @if(!empty($row['pac']))<span>Paciente{{ !empty($row['pac_detalle']) ? ' ('.e($row['pac_detalle']).')' : '' }}</span>@endif
+                        </div>
+                    @endif
+                @endforeach
+            </div>
+            @if(!empty($patient->medical_history_notes))
+                <div style="margin-top:12px;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Otros antecedentes:</strong> {!! $val($patient->medical_history_notes) !!}</div>
+            @endif
+        @endif
     </div>
 
-    {{-- Antecedentes Personales Patológicos --}}
+    {{-- Eventos y Medicación --}}
     <div style="margin-bottom: 32px;">
-        <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Antecedentes Personales Patológicos</h3>
-        <div class="grid grid-3">
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Hospitalización:</strong> {!! $val($pat['hospitalizacion']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Cirugías:</strong> {!! $val($pat['cirugias']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Hábitos Tóxicos:</strong> {!! $val($pat['habitos_toxicos']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Alergias:</strong> {!! $val($pat['alergias']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Traumatismos:</strong> {!! $val($pat['traumatismos']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Convulsiones:</strong> {!! $val($pat['convulsiones']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Neoplasias:</strong> {!! $val($pat['neoplasias']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Hipertensión:</strong> {!! $val($pat['hipertension']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Diabetes:</strong> {!! $val($pat['diabetes']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Reumatológicos:</strong> {!! $val($pat['reumatologicos']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Psiquiátricos:</strong> {!! $val($pat['psiquiatricos']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Enfermedades Congénitas:</strong> {!! $val($pat['enfermedades_congenitas']) !!}</div>
-            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Medicamentos Actuales:</strong> {!! $val($pat['medicamentos_actuales']) !!}</div>
-            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Otros:</strong> {!! $val($pat['otros']) !!}</div>
+        <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Eventos y Medicación</h3>
+        <div class="grid grid-2">
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Hábitos Tóxicos:</strong> {!! $tags($toxicHabits) !!}</div>
+            @php
+                $alergiasTexto = trim(implode(' — ', array_filter([
+                    empty($allergiesList) ? '' : implode(', ', $allergiesList),
+                    $patient->allergies_detail ?? '',
+                ])));
+            @endphp
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Alergias:</strong> {!! $val($alergiasTexto) !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Hospitalizaciones:</strong> <ul style="margin:4px 0 0; padding-left:18px;">{!! $listado($patient->hospitalizations, 'detalle') !!}</ul>{!! empty($patient->hospitalizations) ? $val(null) : '' !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Cirugías:</strong> <ul style="margin:4px 0 0; padding-left:18px;">{!! $listado($patient->surgeries, 'detalle') !!}</ul>{!! empty($patient->surgeries) ? $val(null) : '' !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Traumatismos:</strong> <ul style="margin:4px 0 0; padding-left:18px;">{!! $listado($patient->traumas, 'detalle') !!}</ul>{!! empty($patient->traumas) ? $val(null) : '' !!}</div>
+            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Medicamentos Actuales:</strong> <ul style="margin:4px 0 0; padding-left:18px;">{!! $listado($patient->current_medications, 'detalle') !!}</ul>{!! empty($patient->current_medications) ? $val(null) : '' !!}</div>
+            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Otros eventos:</strong> {!! $val($patient->events_notes) !!}</div>
         </div>
     </div>
 
     {{-- Interrogatorio por Aparatos y Sistemas --}}
     <div style="margin-bottom: 32px;">
         <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Interrogatorio por Aparatos y Sistemas</h3>
-        <div class="grid grid-3">
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Alt. Visuales:</strong> {!! $val($sr['visual']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Alt. Auditivas:</strong> {!! $val($sr['auditivo']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Alt. Sensoriales:</strong> {!! $val($sr['sensorial']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Musculoesquelético:</strong> {!! $val($sr['musculoesqueletico']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Sistema Nervioso:</strong> {!! $val($sr['sistema_nervioso']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Metabólico:</strong> {!! $val($sr['metabolico']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Respiratorio:</strong> {!! $val($sr['respiratorio']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Cardíaco:</strong> {!! $val($sr['cardiaco']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Gastrointestinal:</strong> {!! $val($sr['gastrointestinal']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Genitourinario:</strong> {!! $val($sr['genitourinario']) !!}</div>
-            <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">Piel:</strong> {!! $val($sr['piel']) !!}</div>
-            <div style="grid-column: 1/-1;"><strong style="color:var(--text-secondary);font-size:12px;display:block;">Otros:</strong> {!! $val($sr['otros']) !!}</div>
-        </div>
+        @php $algunoPresente = collect($symptoms)->contains(fn($row) => !empty($row['presente'])); @endphp
+        @if(!$algunoPresente)
+            <p style="color:var(--text-muted); font-size:13px;">Sin síntomas referidos.</p>
+        @else
+            <div class="grid grid-2">
+                @foreach($interrogatorioCat as $key => $info)
+                    @php $row = $symptoms[$key] ?? []; @endphp
+                    @if(!empty($row['presente']))
+                        <div><strong style="color:var(--text-secondary);font-size:12px;display:block;">{{ $info['n'] }}:</strong> {!! $val($row['detalle'] ?? '') !!}</div>
+                    @endif
+                @endforeach
+            </div>
+        @endif
     </div>
 
     {{-- Observaciones --}}
     <div>
-        <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Observaciones Generales</h3>
-        <p style="white-space:pre-wrap; font-size:14px; line-height:1.6; color:var(--text-primary);">{{ $record->observations ?? 'Ninguna observación registrada.' }}</p>
+        <h3 style="font-size:16px; font-weight:600; margin-bottom: 16px; color:var(--text-primary); border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px;">Observaciones del Fisioterapeuta</h3>
+        <p style="white-space:pre-wrap; font-size:14px; line-height:1.6; color:var(--text-primary);">{{ $patient->observations ?? 'Ninguna observación registrada.' }}</p>
     </div>
 </div>

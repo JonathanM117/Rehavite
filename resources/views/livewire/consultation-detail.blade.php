@@ -5,16 +5,7 @@
         <div id="edit-consultation-modal"
              x-data="{}"
              x-init="document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = ''; }"
-             onclick="if(event.target===this) {
-                 const form = document.getElementById('edit-consultation-form');
-                 if (form && form.dataset.dirty === 'true') {
-                     if (!confirm('Tienes cambios sin guardar en la consulta. ¿Seguro que deseas salir sin guardar?')) {
-                         return;
-                     }
-                 }
-                 if (form) { delete form.dataset.dirty; }
-                 @this.cancelEdit();
-             }"
+             onclick="if(event.target===this) handleUnsavedExit('edit-consultation-form', () => { @this.cancelEdit(); })"
              style="position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); padding:24px; overflow-y:auto; display:flex; align-items:flex-start; justify-content:center;">
              
              <div style="background:var(--bg-app); max-width:1100px; width:100%; margin:40px auto; border-radius:16px; padding:32px; position:relative; box-shadow:0 30px 80px rgba(0,0,0,0.6);">
@@ -29,7 +20,7 @@
                              Guardar Cambios
                          </button>
                          <button type="button"
-                                 onclick="const form = document.getElementById('edit-consultation-form'); if(form && form.dataset.dirty === 'true' && !confirm('Tienes cambios sin guardar en la consulta. ¿Seguro que deseas salir sin guardar?')) return; if(form) { delete form.dataset.dirty; } @this.cancelEdit();"
+                                 onclick="handleUnsavedExit('edit-consultation-form', () => { @this.cancelEdit(); })"
                                  style="background:rgba(255,255,255,0.1); border:none; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; color:var(--text-secondary); cursor:pointer;">
                              <i class="fas fa-times"></i>
                          </button>
@@ -80,25 +71,25 @@
                              <i class="fas fa-chevron-down" style="margin-left:auto; font-size:12px; color:var(--text-muted);"></i>
                          </summary>
                          <div class="grid grid-2" style="margin-top:12px;">
-                             <div class="form-group">
+                             <div class="form-group" style="grid-column: 1 / -1;">
                                  <label class="form-label">Inicio</label>
-                                 <input type="text" wire:model="current_condition.inicio" class="form-control-modern" style="text-transform:capitalize;" placeholder="¿Cuándo inició? ¿Cómo?">
+                                 <input type="text" wire:model="current_condition.inicio" class="form-control-modern" placeholder="¿Cuándo inició? ¿Cómo?">
                              </div>
                              <div class="form-group" style="grid-column: 1 / -1;">
                                  <label class="form-label">Mecanismo de Lesión</label>
-                                 <input type="text" wire:model="current_condition.mecanismo_lesion" class="form-control-modern" style="text-transform:capitalize;" placeholder="Traumático, insidioso, postural...">
+                                 <input type="text" wire:model="current_condition.mecanismo_lesion" class="form-control-modern" placeholder="Traumático, insidioso, postural...">
                              </div>
-                             <div class="form-group">
+                             <div class="form-group" style="grid-column: 1 / -1;">
                                  <label class="form-label">Evolución</label>
-                                 <input type="text" wire:model="current_condition.evolucion" class="form-control-modern" style="text-transform:capitalize;" placeholder="Mejora, empeora, estable...">
+                                 <input type="text" wire:model="current_condition.evolucion" class="form-control-modern" placeholder="Mejora, empeora, estable...">
                              </div>
                              <div class="form-group" style="grid-column: 1 / -1;">
                                  <label class="form-label">Tratamiento Actual</label>
-                                 <input type="text" wire:model="current_condition.tratamiento_actual" class="form-control-modern" style="text-transform:capitalize;" placeholder="Medicamentos, fisioterapia previa...">
+                                 <input type="text" wire:model="current_condition.tratamiento_actual" class="form-control-modern" placeholder="Medicamentos, fisioterapia previa...">
                              </div>
                              <div class="form-group">
                                  <label class="form-label">Limitación del Movimiento</label>
-                                 <input type="text" wire:model="current_condition.limitacion_movimiento" class="form-control-modern" style="text-transform:capitalize;">
+                                 <input type="text" wire:model="current_condition.limitacion_movimiento" class="form-control-modern">
                              </div>
                              <div class="form-group">
                                  <label class="form-label">EVA (Escala Visual Analógica)</label>
@@ -106,15 +97,15 @@
                              </div>
                              <div class="form-group">
                                  <label class="form-label">Fuerza</label>
-                                 <input type="text" wire:model="current_condition.fuerza" class="form-control-modern" style="text-transform:capitalize;" placeholder="5/5, 4/5...">
+                                 <input type="text" wire:model="current_condition.fuerza" class="form-control-modern" placeholder="5/5, 4/5...">
                              </div>
                              <div class="form-group">
                                  <label class="form-label">Actividad Física</label>
-                                 <input type="text" wire:model="current_condition.actividad_fisica" class="form-control-modern" style="text-transform:capitalize;" placeholder="Sedentario, moderado, activo...">
+                                 <input type="text" wire:model="current_condition.actividad_fisica" class="form-control-modern" placeholder="Sedentario, moderado, activo...">
                              </div>
-                             <div class="form-group">
+                             <div class="form-group" style="grid-column: 1 / -1;">
                                  <label class="form-label">Tipo de Dolor</label>
-                                 <input type="text" wire:model="current_condition.tipo_dolor" class="form-control-modern" style="text-transform:capitalize;" placeholder="Ej: Punzante, quemante...">
+                                 <input type="text" wire:model="current_condition.tipo_dolor" class="form-control-modern" placeholder="Ej: Punzante, quemante...">
                                  <span style="font-size:11px;color:var(--text-muted);display:block;margin-top:2px;">Sugerencias: Punzante, quemante, calambre, sordo</span>
                              </div>
                              <div class="form-group" style="grid-column: 1 / -1;">
@@ -123,23 +114,23 @@
                              </div>
                              <div class="form-group" style="grid-column: 1 / -1;">
                                  <label class="form-label">Factores que Alivian las Molestias</label>
-                                 <input type="text" wire:model="current_condition.factores_alivian" class="form-control-modern" style="text-transform:capitalize;" placeholder="Ej: Reposo, calor, frío, estiramientos...">
+                                 <input type="text" wire:model="current_condition.factores_alivian" class="form-control-modern" placeholder="Ej: Reposo, calor, frío, estiramientos...">
                              </div>
                              <div class="form-group">
                                  <label class="form-label">Pérdida/Ganancia de Peso Repentina</label>
-                                 <input type="text" wire:model="current_condition.cambio_peso" class="form-control-modern" style="text-transform:capitalize;" placeholder="Sí / No / Descripción">
+                                 <input type="text" wire:model="current_condition.cambio_peso" class="form-control-modern" placeholder="Sí / No / Descripción">
                              </div>
                              <div class="form-group">
                                  <label class="form-label">Cambios en el Apetito</label>
-                                 <input type="text" wire:model="current_condition.cambios_apetito" class="form-control-modern" style="text-transform:capitalize;" placeholder="Sí / No / Descripción">
+                                 <input type="text" wire:model="current_condition.cambios_apetito" class="form-control-modern" placeholder="Sí / No / Descripción">
                              </div>
                              <div class="form-group">
                                  <label class="form-label">Debilidad o Astenia</label>
-                                 <input type="text" wire:model="current_condition.debilidad_astenia" class="form-control-modern" style="text-transform:capitalize;" placeholder="Sí / No / Descripción">
+                                 <input type="text" wire:model="current_condition.debilidad_astenia" class="form-control-modern" placeholder="Sí / No / Descripción">
                              </div>
                              <div class="form-group">
                                  <label class="form-label">Incontinencia Fecal/Urinaria</label>
-                                 <input type="text" wire:model="current_condition.incontinencia" class="form-control-modern" style="text-transform:capitalize;" placeholder="Sí / No / Descripción">
+                                 <input type="text" wire:model="current_condition.incontinencia" class="form-control-modern" placeholder="Sí / No / Descripción">
                              </div>
                              <div class="form-group" style="grid-column: 1 / -1;">
                                  <label class="form-label">Otros <span style="color:var(--text-muted); font-weight:400;">(hematoma, postura, marcha, signos de inflamación)</span></label>
@@ -195,7 +186,7 @@
                                  <label class="form-label">Peso (kg)</label>
                                  <input type="text" wire:model="physical_exam.peso" class="form-control-modern" placeholder="70">
                              </div>
-                             <div class="form-group">
+                             <div class="form-group" style="grid-column: 1 / -1;">
                                  <label class="form-label">Altura (cm)</label>
                                  <input type="text" wire:model="physical_exam.altura" class="form-control-modern" placeholder="170">
                              </div>
@@ -344,7 +335,7 @@
                      {{-- Botones guardar / cancelar --}}
                      <div style="display:flex;gap:12px;justify-content:center;margin-top:24px;">
                          <button type="button" class="btn-modern btn-secondary btn-sm"
-                                 onclick="const form = document.getElementById('edit-consultation-form'); if(form && form.dataset.dirty === 'true' && !confirm('Tienes cambios sin guardar en la consulta. ¿Seguro que deseas salir sin guardar?')) return; if(form) { delete form.dataset.dirty; } @this.cancelEdit();"
+                                 onclick="handleUnsavedExit('edit-consultation-form', () => { @this.cancelEdit(); })"
                                  style="flex:1; max-width:200px; text-align:center; justify-content:center;">Cancelar</button>
                          <button type="submit" id="save-consultation-submit-btn" class="btn-modern btn-primary btn-sm" style="flex:1; max-width:200px; text-align:center; justify-content:center;" wire:loading.attr="disabled" wire:target="saveConsultation">
                              <i class="fas fa-save" wire:loading.remove wire:target="saveConsultation"></i>

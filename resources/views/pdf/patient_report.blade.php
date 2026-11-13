@@ -99,13 +99,13 @@
                 <div class="field"><span class="field-label">Fecha de nacimiento</span><span class="field-value">{{ $patient->birth_date?->format('d/m/Y') ?? '—' }}</span></div>
                 <div class="field"><span class="field-label">Edad</span><span class="field-value">{{ $patient->age ?? '—' }} a&ntilde;os</span></div>
                 <div class="field"><span class="field-label">G&eacute;nero</span><span class="field-value">{{ ucfirst($patient->gender ?? '—') }}</span></div>
-                <div class="field"><span class="field-label">Estado Civil</span><span class="field-value">{{ $record?->marital_status ?? '—' }}</span></div>
+                <div class="field"><span class="field-label">Estado Civil</span><span class="field-value">{{ $patient->marital_status ?? '—' }}</span></div>
             </td>
             <td class="col">
                 <div class="field"><span class="field-label">Tel&eacute;fono</span><span class="field-value">{{ $patient->phone ?? '—' }}</span></div>
                 <div class="field"><span class="field-label">Correo electr&oacute;nico</span><span class="field-value">{{ $patient->email ?? '—' }}</span></div>
                 <div class="field"><span class="field-label">Fisioterapeuta asignado</span><span class="field-value">{{ $patient->user?->name ?? '—' }}</span></div>
-                <div class="field"><span class="field-label">Cuidador Primario</span><span class="field-value">{{ $record?->primary_caregiver ?? '—' }}</span></div>
+                <div class="field"><span class="field-label">Cuidador Primario</span><span class="field-value">{{ $patient->primary_caregiver ?? '—' }}</span></div>
                 <div class="field"><span class="field-label">Fecha de registro</span><span class="field-value">{{ $patient->created_at->format('d/m/Y') }}</span></div>
             </td>
         </tr>
@@ -113,7 +113,6 @@
 </div>
 
 {{-- ══ EXPEDIENTE MEDICO ══ --}}
-@if($record)
 <div class="section">
     <div class="section-title">2. Expediente M&eacute;dico</div>
 
@@ -121,39 +120,39 @@
     <table class="grid-2">
         <tr>
             <td class="col">
-                <div class="field"><span class="field-label">Ocupaci&oacute;n</span><span class="field-value">{{ $record->occupation ?? '—' }}</span></div>
-                <div class="field"><span class="field-label">Lateralidad</span><span class="field-value">{{ $record->laterality ?? '—' }}</span></div>
-                <div class="field"><span class="field-label">Dependencia econ&oacute;mica</span><span class="field-value">{{ $record->economic_dependency ?? '—' }}</span></div>
+                <div class="field"><span class="field-label">Ocupaci&oacute;n</span><span class="field-value">{{ $patient->occupation ?? '—' }}</span></div>
+                <div class="field"><span class="field-label">Lateralidad</span><span class="field-value">{{ $patient->laterality ?? '—' }}</span></div>
+                <div class="field"><span class="field-label">Dependencia econ&oacute;mica</span><span class="field-value">{{ $patient->economic_dependency ?? '—' }}</span></div>
             </td>
             <td class="col">
-                <div class="field"><span class="field-label">Direcci&oacute;n</span><span class="field-value">{{ $record->address ?? '—' }}</span></div>
+                <div class="field"><span class="field-label">Direcci&oacute;n</span><span class="field-value">{{ $patient->address ?? '—' }}</span></div>
             </td>
         </tr>
     </table>
 
-    @if($record->observations)
-    <div class="field"><span class="field-label">Observaciones</span><span class="field-value">{{ $record->observations }}</span></div>
+    @if($patient->observations)
+    <div class="field"><span class="field-label">Observaciones del Fisioterapeuta</span><span class="field-value">{{ $patient->observations }}</span></div>
     @endif
 
     {{-- Representante Legal --}}
-    @if($record->guardian_name)
+    @if($patient->guardian_name)
     <div class="sub-title">Representante Legal</div>
     <table class="grid-2">
         <tr>
             <td class="col">
-                <div class="field"><span class="field-label">Nombre</span><span class="field-value">{{ $record->guardian_name }}</span></div>
-                <div class="field"><span class="field-label">Fecha de nacimiento</span><span class="field-value">{{ $record->guardian_birth_date?->format('d/m/Y') ?? '—' }}</span></div>
+                <div class="field"><span class="field-label">Nombre</span><span class="field-value">{{ $patient->guardian_name }}</span></div>
+                <div class="field"><span class="field-label">Fecha de nacimiento</span><span class="field-value">{{ $patient->guardian_birth_date?->format('d/m/Y') ?? '—' }}</span></div>
             </td>
             <td class="col">
-                <div class="field"><span class="field-label">Edad</span><span class="field-value">{{ $record->guardian_age ?? '—' }} a&ntilde;os</span></div>
-                <div class="field"><span class="field-label">G&eacute;nero</span><span class="field-value">{{ $record->guardian_gender ?? '—' }}</span></div>
+                <div class="field"><span class="field-label">Edad</span><span class="field-value">{{ $patient->guardian_age ?? '—' }} a&ntilde;os</span></div>
+                <div class="field"><span class="field-label">G&eacute;nero</span><span class="field-value">{{ $patient->guardian_gender ?? '—' }}</span></div>
             </td>
         </tr>
     </table>
     @endif
 
     {{-- Antecedentes Personales No Patológicos --}}
-    @php $np = $record->personal_non_pathological ?? []; @endphp
+    @php $np = $patient->personal_non_pathological ?? []; @endphp
     @if(array_filter($np))
     <div class="sub-title">Antecedentes Personales No Patol&oacute;gicos</div>
     <table class="json-grid">
@@ -164,7 +163,7 @@
     @endif
 
     {{-- Antecedentes Heredofamiliares --}}
-    @php $fh = $record->family_history ?? []; @endphp
+    @php $fh = $patient->family_history ?? []; @endphp
     @if(array_filter($fh))
     <div class="sub-title">Antecedentes Heredofamiliares</div>
     <table class="json-grid">
@@ -175,7 +174,7 @@
     @endif
 
     {{-- Antecedentes Personales Patológicos --}}
-    @php $pp = $record->personal_pathological ?? []; @endphp
+    @php $pp = $patient->personal_pathological ?? []; @endphp
     @if(array_filter($pp))
     <div class="sub-title">Antecedentes Personales Patol&oacute;gicos</div>
     <table class="json-grid">
@@ -186,7 +185,7 @@
     @endif
 
     {{-- Interrogatorio por Aparatos y Sistemas --}}
-    @php $sr = $record->systems_review ?? []; @endphp
+    @php $sr = $patient->systems_review ?? []; @endphp
     @if(array_filter($sr))
     <div class="sub-title">Interrogatorio por Aparatos y Sistemas</div>
     <table class="json-grid">
@@ -196,7 +195,6 @@
     </table>
     @endif
 </div>
-@endif
 
 {{-- ══ DIAGNÓSTICO INICIAL ══ --}}
 <div class="section">

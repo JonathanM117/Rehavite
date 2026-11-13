@@ -17,7 +17,6 @@ class ReportController extends Controller
         $this->authorizePatient($patient);
 
         $patient->load([
-            'medicalRecord',
             'user',
             'consultations.evolutionNotes',
             'consultations.exercises',
@@ -30,7 +29,6 @@ class ReportController extends Controller
 
         $pdf = Pdf::loadView('pdf.patient_report', [
             'patient'       => $patient,
-            'record'        => $patient->medicalRecord,
             'consultations' => $patient->consultations,
             'logoBase64'    => $logoBase64,
         ])->setPaper('a4', 'portrait');

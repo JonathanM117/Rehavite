@@ -27,11 +27,93 @@ class Patient extends Model
         'status',
         'deletion_requested_by',
         'deletion_requested_at',
+        // Historia clínica (antes en la tabla medical_records, unificada aquí)
+        'manual_age',
+        'marital_status',
+        'address',
+        'laterality',
+        'occupation',
+        'economic_dependency',
+        'primary_caregiver',
+        'guardian_name',
+        'guardian_birth_date',
+        'guardian_age',
+        'guardian_gender',
+        'observations',
+        'family_history',
+        'personal_non_pathological',
+        'personal_pathological',
+        'systems_review',
+        'pediatric_history',
+        // Rediseño del Expediente (adopción del HTML de referencia)
+        'body_regions',
+        'phone_owner',
+        'alt_contact_name',
+        'alt_contact_relationship',
+        'alt_contact_phone',
+        'referral_source',
+        'referral_source_other',
+        'referring_doctor',
+        'emergency_contact_name',
+        'emergency_contact_phone',
+        'emergency_contact_relationship',
+        'guardian_required',
+        'birth_place',
+        'street_address',
+        'neighborhood',
+        'municipality',
+        'zone',
+        'housing_type',
+        'transportation',
+        'architectural_barriers',
+        'education_level',
+        'physical_build',
+        'stress_level',
+        'work_demand',
+        'diet',
+        'adl_independence',
+        'perceived_health',
+        'sleep_habits',
+        'pets',
+        'non_pathological_notes',
+        'medical_history_matrix',
+        'medical_history_deny_family',
+        'medical_history_deny_patient',
+        'medical_history_notes',
+        'symptoms_review',
+        'toxic_habits',
+        'allergies',
+        'allergies_detail',
+        'hospitalizations',
+        'surgeries',
+        'traumas',
+        'current_medications',
+        'events_notes',
     ];
 
     protected $casts = [
         'birth_date'             => 'date',
         'deletion_requested_at'  => 'datetime',
+        'guardian_birth_date'    => 'date',
+        'family_history'             => 'array',
+        'personal_non_pathological'  => 'array',
+        'personal_pathological'      => 'array',
+        'systems_review'              => 'array',
+        'pediatric_history'           => 'array',
+        'body_regions'                => 'array',
+        'architectural_barriers'      => 'array',
+        'pets'                        => 'array',
+        'medical_history_matrix'      => 'array',
+        'medical_history_deny_family' => 'boolean',
+        'medical_history_deny_patient' => 'boolean',
+        'symptoms_review'             => 'array',
+        'toxic_habits'                => 'array',
+        'allergies'                   => 'array',
+        'hospitalizations'            => 'array',
+        'surgeries'                   => 'array',
+        'traumas'                     => 'array',
+        'current_medications'         => 'array',
+        'guardian_required'           => 'boolean',
     ];
 
     // ─── Status Helpers ──────────────────────────────
@@ -51,11 +133,6 @@ class Patient extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function medicalRecord()
-    {
-        return $this->hasOne(MedicalRecord::class);
     }
 
     public function deletionRequestedBy()
@@ -185,6 +262,18 @@ class Patient extends Model
         return $labels[strtolower($this->status)] ?? ucfirst(str_replace('_', ' ', $this->status ?? ''));
     }
 
+    public function getGenderLabelAttribute(): string
+    {
+        $labels = [
+            'masculino' => 'Masculino',
+            'femenino' => 'Femenino',
+            'otro' => 'Otro',
+            'no_especificado' => 'Prefiere no especificar',
+        ];
+
+        return $labels[$this->gender] ?? '—';
+    }
+
     public function getExpedienteIdAttribute(): string
     {
         $nombre = \Illuminate\Support\Str::ascii(trim($this->name));
@@ -201,5 +290,126 @@ class Patient extends Model
         $exp = strtoupper($letrasNombre . $letrasApellido);
 
         return $exp . '-' . $fecha;
+    }
+
+    // ─── Valores por defecto de la historia clínica (campos JSON) ───
+
+    public static function pediatricHistoryDefaults(): array
+    {
+        return [
+            'is_pediatric' => false,
+            'gestational_age' => '',
+            'birth_weight' => '',
+            'birth_height' => '',
+            'apgar' => '',
+            'delivery_type' => '',
+            'complications' => '',
+            'neonatal_hospitalization' => '',
+            'milestone_head_control' => '',
+            'milestone_sitting' => '',
+            'milestone_crawling' => '',
+            'milestone_standing' => '',
+            'milestone_walking' => '',
+            'language_development' => '',
+            'vaccinations' => '',
+            'reflexes' => '',
+            'other_development' => '',
+        ];
+    }
+
+    public static function familyHistoryDefaults(): array
+    {
+        return [
+            'diabetes' => '',
+            'cardiacas' => '',
+            'vasculares' => '',
+            'pulmonares' => '',
+            'neoplasias' => '',
+            'metabolicos' => '',
+            'sindromes' => '',
+            'sistema_nervioso' => '',
+            'autoinmunes' => '',
+            'otros' => '',
+        ];
+    }
+
+    public static function personalNonPathologicalDefaults(): array
+    {
+        return [
+            'lugar_nacimiento' => '',
+            'residencia_actual' => '',
+            'casa_habitacion' => '',
+            'transporte' => '',
+            'nivel_socioeconomico' => '',
+            'animales_domesticos' => '',
+            'complexion_fisica' => '',
+            'nivel_estres' => '',
+            'exigencia_laboral' => '',
+            'dieta' => '',
+            'avd' => '',
+            'estado_salud' => '',
+            'habitos_sueno' => '',
+            'otros' => '',
+        ];
+    }
+
+    public static function personalPathologicalDefaults(): array
+    {
+        return [
+            'hospitalizacion' => '',
+            'cirugias' => '',
+            'habitos_toxicos' => '',
+            'alergias' => '',
+            'traumatismos' => '',
+            'convulsiones' => '',
+            'neoplasias' => '',
+            'hipertension' => '',
+            'diabetes' => '',
+            'reumatologicos' => '',
+            'psiquiatricos' => '',
+            'enfermedades_congenitas' => '',
+            'medicamentos_actuales' => '',
+            'otros' => '',
+        ];
+    }
+
+    public static function systemsReviewDefaults(): array
+    {
+        return [
+            'visual' => '',
+            'auditivo' => '',
+            'sensorial' => '',
+            'musculoesqueletico' => '',
+            'sistema_nervioso' => '',
+            'metabolico' => '',
+            'respiratorio' => '',
+            'cardiaco' => '',
+            'gastrointestinal' => '',
+            'genitourinario' => '',
+            'piel' => '',
+            'otros' => '',
+        ];
+    }
+
+    /**
+     * Fila vacía de la matriz de antecedentes (familia/paciente) para cada
+     * condición del catálogo de \App\Support\ExpedienteCatalogo::antecedentes().
+     */
+    public static function medicalHistoryMatrixDefaults(): array
+    {
+        $row = ['fam' => false, 'fam_detalle' => '', 'pac' => false, 'pac_detalle' => ''];
+
+        return array_fill_keys(array_keys(\App\Support\ExpedienteCatalogo::antecedentes()), $row);
+    }
+
+    /**
+     * Estado vacío del interrogatorio por síntomas (uno por cada clave de
+     * \App\Support\ExpedienteCatalogo::interrogatorio()).
+     */
+    public static function symptomsReviewDefaults(): array
+    {
+        $row = ['presente' => null, 'detalle' => ''];
+
+        return array_fill_keys(array_keys(\App\Support\ExpedienteCatalogo::interrogatorio()), $row);
     }
 }

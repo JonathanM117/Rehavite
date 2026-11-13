@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\PatientController;
-use App\Http\Controllers\Admin\MedicalRecordController;
 use App\Http\Controllers\Admin\ConsultationController;
 use App\Http\Controllers\Admin\PaymentController;
 use App\Http\Controllers\Admin\ControlCenterController;
@@ -44,11 +43,8 @@ Route::middleware(['auth'])->group(function () {
 
     Route::resource('pacientes', PatientController::class)
         ->names('admin.patients')
-        ->parameters(['pacientes' => 'patient']);
-    Route::resource('expedientes', MedicalRecordController::class)
-        ->names('admin.medical-records')
-        ->parameters(['expedientes' => 'medicalRecord'])
-        ->only(['store', 'update', 'destroy']);
+        ->parameters(['pacientes' => 'patient'])
+        ->except(['edit']);
     Route::resource('consultas', ConsultationController::class)
         ->names('admin.consultations')
         ->parameters(['consultas' => 'consultation'])

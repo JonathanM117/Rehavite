@@ -3,6 +3,7 @@
 namespace App\Http\Livewire;
 
 use Livewire\Component;
+use Livewire\Attributes\Computed;
 use App\Models\Consultation;
 
 class ConsultationDetail extends Component
@@ -29,7 +30,8 @@ class ConsultationDetail extends Component
     public $discharge_reason;
     public $status;
 
-    public function getConsultationProperty()
+    #[Computed]
+    public function consultation()
     {
         return Consultation::with([
             'patient.user',
@@ -45,7 +47,8 @@ class ConsultationDetail extends Component
     /**
      * Documentos del repositorio del paciente que aún no están vinculados a este episodio.
      */
-    public function getAvailableDocumentsToLinkProperty()
+    #[Computed]
+    public function availableDocumentsToLink()
     {
         $consultation = $this->consultation;
         if (!$consultation) {
@@ -68,11 +71,13 @@ class ConsultationDetail extends Component
 
         $this->consultation->clinicalDocuments()->syncWithoutDetaching([$this->selectedDocumentToLink]);
         $this->selectedDocumentToLink = '';
+        unset($this->consultation, $this->availableDocumentsToLink);
     }
 
     public function unlinkDocument($documentId)
     {
         $this->consultation->clinicalDocuments()->detach($documentId);
+        unset($this->consultation, $this->availableDocumentsToLink);
     }
 
     public function mount(Consultation $consultation, $isNew = false)
@@ -149,7 +154,9 @@ class ConsultationDetail extends Component
 
     private function cap(?string $v): ?string
     {
-        return $v;
+        if (is_null($v) || trim($v) === '') return $v;
+        $v = trim($v);
+        return mb_strtoupper(mb_substr($v, 0, 1)) . mb_substr($v, 1);
     }
 
     private function capArray(?array $arr): ?array

@@ -875,3 +875,80 @@ html, body { overflow-x: hidden; }
     .topbar-title { font-size: 14px; }
     .slide-panel { padding: 16px; }
 }
+
+/* ══════════════════════════════════════════════════════
+   Expediente: rejilla de 12 columnas y widgets del
+   formulario rediseñado (identificación, antecedentes,
+   interrogatorio, eventos, etc.)
+   ══════════════════════════════════════════════════════ */
+.rejilla { display: grid; grid-template-columns: repeat(12, 1fr); gap: 20px 16px; container-type: inline-size; }
+.campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.campo .form-label { margin-bottom: 0; }
+.w3 { grid-column: span 3; } .w4 { grid-column: span 4; } .w5 { grid-column: span 5; }
+.w6 { grid-column: span 6; } .w8 { grid-column: span 8; } .w12 { grid-column: span 12; }
+@container (max-width: 700px) { .w3, .w4, .w5, .w6, .w8 { grid-column: span 6; } }
+@container (max-width: 430px) { .w3, .w4, .w5, .w6, .w8 { grid-column: span 12; } }
+
+label .opc { font-size: 11px; color: var(--text-muted); font-weight: 400; }
+.etiqueta-quien { font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--accent-primary); display: block; margin-bottom: 4px; }
+.derivado { font-size: 13px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.derivado strong { color: var(--text-primary); font-weight: 600; }
+.marca-menor { color: var(--warning); font-size: 12px; border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 4px; padding: 1px 6px; }
+
+.banda { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; background: rgba(245, 158, 11, 0.1); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.2); }
+.banda.banda-alerta { background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2); }
+
+/* casillas: grid de checkboxes tipo tarjeta */
+.casillas { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+.casilla { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 13px; color: var(--text-secondary); min-width: 0; transition: var(--transition-fast); }
+.casilla:hover { border-color: var(--accent-primary); }
+.casilla input { width: auto; flex: none; margin: 2px 0 0; accent-color: var(--accent-primary); }
+.casilla:has(input:checked) { border-color: var(--accent-primary); background: var(--accent-glow); color: var(--text-primary); }
+
+/* fichas: chips sugeridos que se agregan a un campo de texto */
+.fichas { display: flex; flex-wrap: wrap; gap: 6px; }
+.ficha { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); cursor: pointer; transition: var(--transition-fast); }
+.ficha:hover { border-color: var(--accent-primary); color: var(--text-primary); }
+.ficha.activa { border-color: var(--accent-primary); background: var(--accent-glow); color: var(--text-primary); }
+
+/* matriz de antecedentes familia/paciente */
+.matriz { display: flex; flex-direction: column; border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden; }
+.matriz-cabeza, .matriz-fila { display: grid; grid-template-columns: 1.6fr .6fr .6fr; gap: 12px; align-items: center; padding: 10px 14px; }
+.matriz-cabeza { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border-color); }
+.matriz-fila { border-bottom: 1px solid var(--border-color); }
+.matriz-fila:last-child { border-bottom: none; }
+.matriz-fila label { display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; font-size: 13px; color: var(--text-secondary); }
+.matriz-fila input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent-primary); cursor: pointer; }
+.matriz-detalle { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+
+/* interrogatorio por síntomas */
+.sintomas { display: flex; flex-direction: column; gap: 10px; }
+.sintoma { border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 14px; background: var(--bg-card); }
+.sintoma-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.sintoma-nombre { font-size: 14px; color: var(--text-primary); }
+.sino { display: inline-flex; border: 1px solid var(--border-color); border-radius: 999px; overflow: hidden; }
+.sino label { margin: 0; padding: 4px 14px; font-size: 12px; cursor: pointer; color: var(--text-secondary); }
+.sino input { position: absolute; opacity: 0; width: 0; height: 0; }
+.sino label:has(input:checked) { background: var(--accent-primary); color: #04201c; font-weight: 600; }
+.sintoma-detalle { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.sintoma-bandera { font-size: 12px; color: var(--danger); display: flex; gap: 6px; align-items: center; }
+
+/* escala 0-10 */
+.escala { display: flex; align-items: center; gap: 12px; }
+.escala input[type="range"] { flex: 1; accent-color: var(--accent-primary); }
+.escala strong { font-size: 15px; color: var(--text-primary); min-width: 2ch; text-align: right; }
+
+/* listas repetibles (hospitalizaciones, cirugías, traumatismos, medicamentos) */
+.lista { display: flex; flex-direction: column; gap: 10px; }
+.renglon { display: grid; grid-template-columns: 1fr; gap: 8px; padding: 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); background: var(--bg-card); position: relative; }
+.renglon .quitar { position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 6px; }
+.renglon .quitar:hover { color: var(--danger); }
+.agregar { align-self: flex-start; }
+
+/* bloque-persona (contactos) + botón de copiar datos entre secciones */
+.bloque-persona { display: flex; flex-direction: column; gap: 10px; }
+.btn-copiar { font-size: 12px; padding: 6px 12px; border-radius: var(--radius-sm); border: 1px dashed var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer; transition: var(--transition-fast); }
+.btn-copiar:hover:not(:disabled) { border-color: var(--accent-primary); color: var(--accent-primary); }
+.btn-copiar:disabled { opacity: .4; cursor: not-allowed; }
+
+[x-cloak] { display: none !important; }

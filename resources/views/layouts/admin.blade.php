@@ -35,6 +35,10 @@
                     <i class="nav-icon fas fa-users"></i>
                     <span>Pacientes</span>
                 </a>
+                <a href="{{ route('admin.exercise-bank.preview') }}" class="nav-item {{ request()->routeIs('admin.exercise-bank.preview') ? 'active' : '' }}">
+                    <i class="nav-icon fas fa-dumbbell"></i>
+                    <span>Ejercicios</span>
+                </a>
                 <a href="{{ route('admin.agenda') }}" class="nav-item {{ request()->routeIs('admin.agenda') ? 'active' : '' }}">
                     <i class="nav-icon fas fa-calendar-alt"></i>
                     <span>Agenda</span>
@@ -180,6 +184,29 @@
         </div>
     </div>
 
+    {{-- ═══ MODAL UNIVERSAL DE "CAMBIOS SIN GUARDAR" ═══ --}}
+    <div id="unsaved-changes-modal"
+         style="display:none; position:fixed; inset:0; z-index:10050; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px;">
+        <div style="background:var(--bg-app); max-width:420px; width:100%; border-radius:14px; padding:24px; box-shadow:0 20px 60px rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.08);">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                <i class="fas fa-exclamation-triangle" style="color:#f59e0b; font-size:20px;"></i>
+                <h3 style="margin:0; font-size:16px; font-weight:700; color:var(--text-primary);">Cambios sin guardar</h3>
+            </div>
+            <p style="margin:0 0 20px; font-size:14px; color:var(--text-secondary); line-height:1.5;">
+                Tienes cambios sin guardar. ¿Qué deseas hacer?
+            </p>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" id="unsaved-changes-discard" class="btn-modern btn-sm"
+                        style="background:rgba(239,68,68,0.1); color:var(--danger); border:1px solid rgba(239,68,68,0.2);">
+                    Salir sin Guardar
+                </button>
+                <button type="button" id="unsaved-changes-save" class="btn-modern btn-primary btn-sm">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ── Universal Preview Modal ──────────────────────────────────────────
         function openPreview(url, type, title) {
@@ -218,6 +245,56 @@
         }
 
         document.addEventListener('keydown', e => { if (e.key === 'Escape') closePreview(); });
+
+        // ── Modal universal de "cambios sin guardar" ──────────────────────────
+        // Un único mensaje y los mismos dos botones ("Guardar" / "Salir sin
+        // Guardar") en toda la app, sin importar el formulario. Devuelve una
+        // Promesa que resuelve a 'save', 'discard', o undefined (el usuario
+        // cerró el aviso con Escape/clic afuera, sin decidir: se queda editando).
+        function confirmUnsavedChanges() {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('unsaved-changes-modal');
+                const btnSave = document.getElementById('unsaved-changes-save');
+                const btnDiscard = document.getElementById('unsaved-changes-discard');
+
+                function cleanup(result) {
+                    modal.style.display = 'none';
+                    btnSave.removeEventListener('click', onSave);
+                    btnDiscard.removeEventListener('click', onDiscard);
+                    modal.removeEventListener('click', onBackdrop);
+                    resolve(result);
+                }
+                function onSave() { cleanup('save'); }
+                function onDiscard() { cleanup('discard'); }
+                function onBackdrop(e) { if (e.target === modal) cleanup(undefined); }
+
+                btnSave.addEventListener('click', onSave);
+                btnDiscard.addEventListener('click', onDiscard);
+                modal.addEventListener('click', onBackdrop);
+                modal.style.display = 'flex';
+            });
+        }
+
+        // Punto único usado por los formularios con cambios sin guardar
+        // (Episodio, Expediente Médico, Nota de Evolución, etc.): si el
+        // formulario tiene cambios sin guardar, pregunta; si no, cierra directo.
+        async function handleUnsavedExit(formId, closeFn) {
+            const form = document.getElementById(formId);
+            if (form && form.dataset.dirty === 'true') {
+                const action = await confirmUnsavedChanges();
+                if (action === 'save') {
+                    delete form.dataset.dirty;
+                    form.requestSubmit();
+                    return;
+                }
+                if (action === 'discard') {
+                    delete form.dataset.dirty;
+                    closeFn();
+                }
+                return; // undefined: se queda editando, no hace nada
+            }
+            closeFn();
+        }
 
         // ── Silent Telemetry ─────────────────────────────────────────────────
         // Sends page navigation and button-clicks to AuditLog silently

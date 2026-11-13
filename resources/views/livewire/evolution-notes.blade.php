@@ -18,17 +18,7 @@
         <div id="evolution-note-modal"
              x-data="{}"
              x-init="document.body.style.overflow = 'hidden'; return () => { document.body.style.overflow = ''; }"
-             onclick="if(event.target===this) {
-                 const form = document.getElementById('evolution-note-form');
-                 if (form && form.dataset.dirty === 'true') {
-                     if (confirm('Tienes cambios sin guardar, ¿deseas guardar?')) {
-                         document.getElementById('save-evolution-note-btn').click();
-                     }
-                 } else {
-                     if (form) { delete form.dataset.dirty; }
-                     @this.cancelEdit();
-                 }
-             }"
+             onclick="if(event.target===this) handleUnsavedExit('evolution-note-form', () => { @this.cancelEdit(); })"
              style="position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); padding:24px; overflow-y:auto; display:flex; align-items:flex-start; justify-content:center;">
              
              <div style="background:var(--bg-app); max-width:800px; width:100%; margin:40px auto; border-radius:16px; padding:32px; position:relative; box-shadow:0 30px 80px rgba(0,0,0,0.6);">
@@ -37,7 +27,7 @@
                  <div class="flex-between" style="margin-bottom:24px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:16px;">
                      <h2 style="margin:0; font-size:20px; font-weight:700;"><i class="fas fa-pen"></i> {{ $editingNoteId ? 'Editar Nota de Evolución' : 'Nueva Nota de Evolución' }}</h2>
                      <button type="button" 
-                             onclick="const form = document.getElementById('evolution-note-form'); if(form && form.dataset.dirty === 'true' && !confirm('Tienes cambios sin guardar en la nota. ¿Seguro que deseas salir sin guardar?')) return; if(form) { delete form.dataset.dirty; } @this.cancelEdit();"
+                             onclick="handleUnsavedExit('evolution-note-form', () => { @this.cancelEdit(); })"
                              style="background:rgba(255,255,255,0.1); border:none; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; color:var(--text-secondary); cursor:pointer;">
                          <i class="fas fa-times"></i>
                      </button>
@@ -125,7 +115,7 @@
 
             <div style="display:flex;gap:12px;justify-content:center;margin-top:20px;">
                 <button type="button" class="btn-modern btn-secondary btn-sm"
-                        onclick="const f = document.getElementById('evolution-note-form'); if(f && f.dataset.dirty === 'true' && !confirm('Tienes cambios sin guardar en la nota. ¿Seguro que deseas salir sin guardar?')) return; if(f) { delete f.dataset.dirty; } @this.cancelEdit();"
+                        onclick="handleUnsavedExit('evolution-note-form', () => { @this.cancelEdit(); })"
                         style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex:1; max-width:200px; text-align:center;">
                     Cancelar
                 </button>

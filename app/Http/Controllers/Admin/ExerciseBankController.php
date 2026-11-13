@@ -16,24 +16,23 @@ class ExerciseBankController extends Controller
     {
         abort_unless($patient->canBeAccessedBy(auth()->user()), 403);
 
-        $patient->load(['medicalRecord', 'user']);
+        $patient->load(['user']);
 
         return $this->render([
             'nombre' => trim($patient->name . ' ' . $patient->last_name),
             'edad'   => $patient->age,
-            'exp'    => $patient->medicalRecord->record_number ?? $patient->expediente_id,
+            'exp'    => $patient->expediente_id,
             'dx'     => $patient->diagnosis,
             'fisio'  => $patient->user->name ?? '',
         ]);
     }
 
     /**
-     * Preview the exercise bank tool without patient data (admin only).
+     * Show the exercise bank tool with no pre-filled data, for people who
+     * aren't registered as a patient yet.
      */
     public function preview()
     {
-        abort_unless(auth()->user()->admin, 403);
-
         return $this->render([]);
     }
 
